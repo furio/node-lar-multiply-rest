@@ -1,0 +1,347 @@
+csr_matrix = require("./csrStuff").csr_matrix;
+WebCL = require('node-webcl');
+clu = require('./clUtils');
+fs = require('fs');
+log=console.log;
+// Platform const for my workspace
+NVIDIA = 0;
+INTEL = 1;
+//
+PLATFORM_IN_USE = NVIDIA;
+
+var listDivisors = function(n) {
+  if (n < 1)
+    throw "Argument error";
+  
+  var small = [];
+  var large = [];
+  var end = Math.floor(Math.sqrt(n));
+  for (var i = 1; i <= end; i++) {
+    if (n % i == 0) {
+      small.push(i);
+      if (i * i != n)  // Don't include a square root twice
+        large.push(n / i);
+    }
+  }
+  large.reverse();
+  return small.concat(large);
+};
+
+// leastFactor, isPrime
+// Copyright (c) 2011 Alexei Kourbatov
+
+var leastFactor = function(n) {
+ if (isNaN(n) || !isFinite(n)) return NaN;  
+ if (n==0) return 0;  
+ if (n%1 || n*n<2) return 1;
+ if (n%2==0) return 2;  
+ if (n%3==0) return 3;  
+ if (n%5==0) return 5;  
+ var m = Math.sqrt(n);
+ for (var i=7;i<=m;i+=30) {
+  if (n%i==0)      return i;
+  if (n%(i+4)==0)  return i+4;
+  if (n%(i+6)==0)  return i+6;
+  if (n%(i+10)==0) return i+10;
+  if (n%(i+12)==0) return i+12;
+  if (n%(i+16)==0) return i+16;
+  if (n%(i+22)==0) return i+22;
+  if (n%(i+24)==0) return i+24;
+ }
+ return n;
+};
+
+var isPrime = function(n) {
+ if (isNaN(n) || !isFinite(n) || n%1 || n<2) return false; 
+ if (n==leastFactor(n)) return true;
+ return false;
+}
+
+// =======================================
+
+var getGoodSingleSize = function(X,Z,MINIMUM_DIVISORS,MAXIMUM_TRIES) {
+  MAXIMUM_TRIES = MAXIMUM_TRIES || 20;
+  MINIMUM_DIVISORS = MINIMUM_DIVISORS || 2;
+  //
+  var filterTooMuch = function(el) { return ((el > 1) && (el < Z)); };
+  //
+  var newX = X;
+  var divX = 0;
+  var i = 0;
+  //
+
+  // If we can get something decent in the next 20
+  while (i <= MAXIMUM_TRIES) {
+    newX += i;
+
+    if ( !isPrime(newX) ) {
+      var currList = listDivisors(newX).filter(filterTooMuch);
+      // log(newX + "-" + currList.length);
+      if ( currList.length >= MINIMUM_DIVISORS ) {
+        currList = currList.reverse();
+        // log(newX + "- L: " + currList);
+        divX = currList[0];
+        return [newX, divX];
+      }
+    }
+
+    i += 1;
+  }
+
+  //
+  throw new Error("Cannot find a suitable couple of divisors!");
+}
+
+var getGoodSizes = function(M,N,Z) {
+  var maxSqrt = Math.ceil( Math.sqrt(Z) );
+  // ----
+  log("Calculating sizes ... [" + M + "," + N + "] Bound: [" + Z + "," + maxSqrt + "]");
+  if ( (M*N) < Z ) {
+    return [ [ M, N ], [ M, N ] ];
+  }
+  log("Calculating sizes ... complex way");
+  var Msizes = getGoodSingleSize(M,maxSqrt);
+  var Nsizes = getGoodSingleSize(N,maxSqrt);
+
+  return [ [ Msizes[0], Nsizes[0] ], [ Msizes[1], Nsizes[1] ] ];
+};
+
+// =======================================
+
+var f_clObject_add = function(obj, array) {
+  array.push(obj);
+}
+
+var f_clObject_clear = function(array) {
+  array = array.reverse();
+  array.forEach(function(el) {
+    el.release();
+  });
+  array.length = 0;
+}
+
+// =======================================
+
+var f_multiplyMatrix = function(matA, matBx) {
+	if (WebCL == undefined) {
+	  throw new Error("Unfortunately your system does not support WebCL. Make sure that you have the WebCL extension installed.");
+	}
+
+  // Keep reference of objects to call release
+  var clObjects = [];
+
+  // Transpose matBx for the algorithm in CL
+  var matB = matBx.transpose();
+
+  //Pick platform
+  var platformList=WebCL.getPlatforms();
+  platform=platformList[PLATFORM_IN_USE];
+  log('using platform: '+platform.getInfo(WebCL.PLATFORM_NAME));
+  
+  //Query the set of devices on this platform
+  var devices = platform.getDevices(WebCL.DEVICE_TYPE_DEFAULT);
+  var currDevice = devices[0];
+  log('using device: '+currDevice.getInfo(WebCL.DEVICE_NAME));
+
+  try {
+    // create GPU context for this platform
+    var context=WebCL.createContext({
+      deviceType: WebCL.DEVICE_TYPE_DEFAULT, 
+      platform: platform
+    });
+    f_clObject_add(context, clObjects);    
+  } catch(err) {
+    f_clObject_clear(clObjects);
+    log("Context error: " + err);
+    throw new Error(err);    
+  }
+
+  //Create and program from source
+  var kernelSource = fs.readFileSync(__dirname + '/' + 'SpMSpM-Multiply-Naive.cl', 'ascii');
+  kernelSource = kernelSource.replace("%%AROW%%", matA.getRowCount());
+  kernelSource = kernelSource.replace("%%BCOL%%", matB.getRowCount());
+
+  try {
+    // Build program
+    var program = context.createProgram(kernelSource);
+    program.build(devices);
+    f_clObject_add(program, clObjects);  
+  } catch(err) {
+    f_clObject_clear(clObjects);
+    log("Program error: " + program.getBuildInfo(currDevice,WebCL.PROGRAM_BUILD_LOG));
+    throw new Error(err);
+  }
+
+  try {
+	  // Create buffer for A and B no copy now
+	  var matA_rowptr = context.createBuffer(WebCL.MEM_READ_ONLY, matA.getRowPointer().length*Uint32Array.BYTES_PER_ELEMENT);
+    f_clObject_add(matA_rowptr, clObjects);  
+	  var matA_colindices = context.createBuffer(WebCL.MEM_READ_ONLY, matA.getColumnIndices().length*Uint32Array.BYTES_PER_ELEMENT);
+    f_clObject_add(matA_colindices, clObjects); 
+	  var matA_data = context.createBuffer(WebCL.MEM_READ_ONLY, matA.getData().length*Float32Array.BYTES_PER_ELEMENT);
+    f_clObject_add(matA_data, clObjects); 
+
+	  var matB_rowptr = context.createBuffer(WebCL.MEM_READ_ONLY, matB.getRowPointer().length*Uint32Array.BYTES_PER_ELEMENT);
+    f_clObject_add(matB_rowptr, clObjects);
+	  var matB_colindices = context.createBuffer(WebCL.MEM_READ_ONLY, matB.getColumnIndices().length*Uint32Array.BYTES_PER_ELEMENT);
+    f_clObject_add(matB_colindices, clObjects);
+	  var matB_data = context.createBuffer(WebCL.MEM_READ_ONLY, matB.getData().length*Float32Array.BYTES_PER_ELEMENT);  
+    f_clObject_add(matB_data, clObjects);
+
+	  // Create buffer for C to read results
+	  var denseResult = context.createBuffer(WebCL.MEM_WRITE_ONLY, (matA.getRowCount()*matBx.getColCount())*Float32Array.BYTES_PER_ELEMENT);
+    f_clObject_add(denseResult, clObjects);
+  } catch(err) {
+    f_clObject_clear(clObjects);
+    log("Error creating buffers: " + err);
+    throw new Error(err);
+  }
+
+  // Create kernel object
+  try {
+    var kernel = program.createKernel("spmm_kernel_naive");
+    f_clObject_add(kernel, clObjects); 
+  } catch(err) {
+    f_clObject_clear(clObjects);
+    log("Error creating kernel: " + program.getBuildInfo(currDevice,WebCL.PROGRAM_BUILD_LOG));
+    throw new Error(err);
+  }
+
+  // Set kernel args
+  var argcKernel = 0;
+  kernel.setArg(argcKernel, matA_rowptr);
+  argcKernel += 1;
+  kernel.setArg(argcKernel, matA_colindices);
+  argcKernel += 1;
+  kernel.setArg(argcKernel, matA_data);
+  argcKernel += 1;
+  kernel.setArg(argcKernel, matB_rowptr);
+  argcKernel += 1;
+  kernel.setArg(argcKernel, matB_colindices);
+  argcKernel += 1;
+  kernel.setArg(argcKernel, matB_data);
+  argcKernel += 1;
+  kernel.setArg(argcKernel, denseResult);
+
+  // Create command queue
+  try {
+    var queue = context.createCommandQueue(currDevice, 0); 
+    f_clObject_add(queue, clObjects); 
+  } catch(err) {
+    f_clObject_clear(clObjects);
+    log("Error creating queue: " + err);
+    throw new Error(err);
+  }  
+  
+  var globalOff = null;
+  var maxWorkSize = currDevice.getInfo(WebCL.DEVICE_MAX_WORK_GROUP_SIZE); // kernel.getWorkGroupInfo(currDevice, WebCL.KERNEL_WORK_GROUP_SIZE);
+
+  try {
+    var arraySizes = getGoodSizes(matA.getRowCount(), matB.getRowCount(), maxWorkSize);
+    var globalWS = arraySizes[0], localWS = arraySizes[1];    
+  } catch(err) {
+    f_clObject_clear(clObjects);
+    log(err);
+    throw new Error(err);
+  }
+
+
+  log("DEVICE_MAX_WORK_GROUP_SIZE: " + maxWorkSize);
+  log("Global offset size: " + globalOff);
+  log("Global work item size: " + globalWS);
+  log("Local work item size: " + localWS);  
+
+  try {
+	  // and copy host contents
+	  queue.enqueueWriteBuffer(matA_rowptr, false, 0, matA.getRowPointer().length*Uint32Array.BYTES_PER_ELEMENT, matA.getRowPointer(true));
+	  queue.enqueueWriteBuffer(matA_colindices, false, 0, matA.getColumnIndices().length*Uint32Array.BYTES_PER_ELEMENT, matA.getColumnIndices(true));
+	  queue.enqueueWriteBuffer(matA_data, false, 0, matA.getData().length*Float32Array.BYTES_PER_ELEMENT, matA.getData(true));
+
+	  queue.enqueueWriteBuffer(matB_rowptr, false, 0, matB.getRowPointer().length*Uint32Array.BYTES_PER_ELEMENT, matB.getRowPointer(true));
+	  queue.enqueueWriteBuffer(matB_colindices, false, 0, matB.getColumnIndices().length*Uint32Array.BYTES_PER_ELEMENT, matB.getColumnIndices(true));
+	  queue.enqueueWriteBuffer(matB_data, false, 0, matB.getData().length*Float32Array.BYTES_PER_ELEMENT, matB.getData(true));
+
+	  // Execute (enqueue) kernel
+	  queue.enqueueNDRangeKernel(kernel, globalOff, globalWS, localWS);
+
+	  var MATRIX_RES = new Float32Array( matA.getRowCount()*matBx.getColCount() );
+	  queue.enqueueReadBuffer(denseResult, true, 0, MATRIX_RES.length*Float32Array.BYTES_PER_ELEMENT, MATRIX_RES);
+
+	  // finish
+	  queue.finish();
+	  queue.flush();
+  } catch(err) {
+	  f_clObject_clear(clObjects);
+	  log("Errors in memory copy - kernel execution: " + err);
+	  throw new Error(err);
+  }
+
+	// Hope
+	f_clObject_clear(clObjects);
+
+  return {"fromdense": MATRIX_RES, "numcols": matBx.getColCount()};
+};
+
+
+exports.multiplyMatrix = function(matA, matBx) { return new csr_matrix( f_multiplyMatrix(matA, matBx) ); };
+
+
+var f_test = function() {
+  var dense = [1,0,0,0,1,
+         0,1,0,0,0,
+         0,0,0,0,1,
+         0,0,1,1,0];
+
+  var denseT = [1,0,0,0,
+          0,1,0,0,
+          0,0,0,1,
+          0,0,0,1,
+          1,0,1,0];
+
+  var csr_dense = new csr_matrix({"fromdense": dense, "numcols": 5});
+  var csr_denseT = new csr_matrix({"fromdense": denseT, "numcols": 4});
+  // log(csr_dense);
+  // log(csr_denseT.transpose());
+  var csr_res = f_multiplyMatrix(csr_dense, csr_denseT);
+  csr_res = new csr_matrix(csr_res);
+  log(csr_res);
+  log(csr_res.toDense());
+};
+
+var f_test2 = function(verify) {
+  verify = verify || false;
+  //
+  var arrayEqualsV8 = function(a,b) { return !(a<b || b<a); };
+  var arrayFlatten = function(c) { c.reduce(function(a, b) { return a.concat(b); }) };  
+  var modrand = require('./matrixGenerator.js').generateBinaryMatrix;
+
+  // Matrix dims
+  // m,n important for testing
+  var m = 23*24;
+  var p = 50;
+  var n = 31*31;
+
+  log("Creating random matrices: " + m + "x" + p + "," + p + "x" + n);
+  var dense = modrand(m,p);
+  var denseT = modrand(p,n);
+
+  log("Transforming into csr_matrix");
+  var csr_dense = new csr_matrix({"fromdense": dense, "numcols": p});
+  var csr_denseT = new csr_matrix({"fromdense": denseT, "numcols": n});
+
+  log("Calculating in WebCL the result of multiplication");
+  var csr_res = f_multiplyMatrix(csr_dense, csr_denseT);
+
+  log("Transforming into csr_matrix the WebCL result");
+  csr_res = new csr_matrix(csr_res);
+
+  if (verify) {
+    log("Calculating in plain JS the result of multiplication");
+    var verify = csr_dense.multiply( csr_denseT );
+
+    log("Are matrix equals: " + arrayEqualsV8( arrayFlatten(csr_res.toDense()), arrayFlatten(verify.toDense()) ) );
+  }
+};
+
+// f_test();
+// f_test2(false);

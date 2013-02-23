@@ -1,0 +1,24 @@
+{
+  "name":"node-lar-multiply-rest",
+  "version":"0.0.1",
+  "author": "Francesco Furiani",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/furio/node-lar-multiply-rest.git"
+  },
+  "engines": {
+      "node": ">= 0.8 < 0.9"
+    },
+  "dependencies":{
+    "gzippo": ">= 0.2.0",
+    "express": ">= 3.0.0",
+    "node-webcl": "https://github.com/furio/node-webcl/tarball/master"
+  },
+  "devDependencies": {
+    "mocha": ">= 1.8.0",
+    "should": ">= 1.2.0"
+  },
+  "main": "./startREST.sh",
+  "optionalDependencies": {}
+}
