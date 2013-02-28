@@ -7,29 +7,29 @@ var i_express = require('express'),
 	i_cluster = require('cluster'),
 // Custom libraries
 	csr_matrix = require("./csrStuff").csr_matrix,
-	g_webcl = USE_WEBCL ? require("./SpMSpM-Multiply.js") : null;
+	g_webcl = USE_WEBCL ? require("./SpMSpM-Multiply.js") : null,
+// Log shortcut
+	log = console.log;	
 
 var numCPUs = require('os').cpus().length;
 var CLUSTER_CHILDS = 1 * numCPUs;
 
-var startClusterServer = function() {
-	if ( USE_CLUSTER == true ) {
+var startClusterServer = function(isCluster) {
+	if ( isCluster == true ) {
 		if ( i_cluster.isMaster ) {
+			log("Starting a cluster of services with " + CLUSTER_CHILDS + " child(s).");
 	  		for ( var i = 0; i < CLUSTER_CHILDS; ++i ) {
 	  			i_cluster.fork();		
 	  		}
 		} else {
-			childServer();
+			childServer(isCluster);
 		}
 	} else {
-		childServer();
+		childServer(isCluster);
 	}	
 };
 
-var childServer = function() {
-	// Log shortcut
-	var log = console.log;
-
+var childServer = function(isCluster) {
 	// Service configurations
 	var WEBPORT = 3000;
 
@@ -58,23 +58,25 @@ var childServer = function() {
 		}
 	};
 
-	// Catch SIGINT
-	process.on('SIGINT', function() {
-	  log('Caught SIGINT. Trying to close gracefully.');
+	if (isCluster == false) {
+		// Catch SIGINT
+		process.on('SIGINT', function() {
+		  log('Caught SIGINT. Trying to close gracefully.');
 
-	  // Kill server if online
-	  if (CURRENT_SERVER != null) {
-	  	CURRENT_SERVER.close();	
-	  }
+		  // Kill server if online
+		  if (CURRENT_SERVER != null) {
+		  	CURRENT_SERVER.close();	
+		  }
 
-	  // Add here WebCl.releaseAll()
+		  // Add here WebCl.releaseAll()
 
-	  // If the GC is exposed call it
-	  callNodeGC();
+		  // If the GC is exposed call it
+		  callNodeGC();
 
-	  // Exit process
-	  process.exit();
-	});
+		  // Exit process
+		  process.exit();
+		});		
+	}
 
 	// Redifine app.listen to disable NAGLE
 	app.listen = function(){
@@ -103,7 +105,7 @@ var childServer = function() {
 		return function(error, JSONdata) {
 			res.header('Cache-Control', 'no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0');
 			if (error != null) {
-				res.send(500, 'Something broke!\n\nDetails: ' + error + '\n\n');
+				res.send(500, 'Something is broken!\n\nDetails: ' + error + '\n\n');
 			} else {
 				log("Sending results through net (async).");
 				if ( JSONdata != null ) {
@@ -127,10 +129,6 @@ var childServer = function() {
 			if ( req.body.hasOwnProperty("matrixa") && req.body.hasOwnProperty("matrixb") ) {
 				var matrixA = req.body.matrixa;
 				var matrixB = req.body.matrixb;
-
-				// Debug log
-				// log("Matrix A: " + matrixA);
-				// log("Matrix B: " + matrixB);
 
 				try {
 					var resultMat = f_multiply_matrices( JSON.parse(matrixA), JSON.parse(matrixB) );
@@ -183,4 +181,4 @@ var childServer = function() {
 };
 
 // Start cluster
-startClusterServer();
+startClusterServer(USE_CLUSTER);

@@ -2,6 +2,18 @@
 #define MAXROW %%AROW%%
 #define MAXCOL %%BCOL%%
 #define AGGRO_SIZE %%AGGROSIZE%%
+#define AGGRO_ARRAY_SIZE (AGGRO_SIZE * MAXROW)
+
+/*
+Idea create a local workSpace.Row * worSpace.Col * float2 ??? row*col < max_local ... max_local*float < local_size???
+	scrivo con getlocalid(0/1)
+
+	array globale è AGGREGATION_CASO_PEGGIORE*float2*MAXROW < MAXROW*MAXCOL
+	barrier(LOCAL)
+	if thread = 0
+	scrivi nella mia porzione d'array che e' get_global_id(0) * 128 le coppie (col, valore)
+*/
+
 
 __kernel void spmm_kernel_naive(
 	__global const uint * restrict ArowPtr, __global const uint * restrict Acols,
@@ -19,7 +31,7 @@ __kernel void spmm_kernel_naive(
 		return;
 	}
 	
-	__local uint3 aggroStructure[AGGRO_SIZE];
+	__local float2 aggroStructure[AGGRO_ARRAY_SIZE];
 
 	int ArowCur = ArowPtr[currRow];
 	int ArowEnd = ArowPtr[currRow+1];
