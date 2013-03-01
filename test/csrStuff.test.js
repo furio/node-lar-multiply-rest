@@ -17,16 +17,24 @@ describe('csr_matrix', function(){
 				  0,0,0,1,
 				  1,0,1,0];
 
-	var ddTMultiply = [2,0,1,0,
+	// For multiplication a different matrix. To show bugs.
+	var denseTwo = [1,0,0,1,
+			 	  0,1,0,0,
+				  0,0,0,1,
+				  0,0,0,1,
+				  1,1,0,1];				  
+
+	var ddTMultiply = [2,1,0,2,
 					   0,1,0,0,
-					   1,0,1,0,
+					   1,1,0,1,
 					   0,0,0,2];
 
-	var csr_dense, csr_denseT, csr_multiply;
+	var csr_dense, csr_denseT, csr_denseTwo, csr_multiply;
 
 	before(function(){
 		csr_dense = new csr_matrix({"fromdense": dense, "numcols": 5});
 		csr_denseT = new csr_matrix({"fromdense": denseT, "numcols": 4});
+		csr_denseTwo = new csr_matrix({"fromdense": denseTwo, "numcols": 4});
 		csr_multiply = new csr_matrix({"fromdense": ddTMultiply, "numcols": 4});
 	})
 
@@ -154,13 +162,16 @@ describe('csr_matrix', function(){
 
   	describe('#multiply(csr_matrix)', function(){
 		it('should return a new csr_matrix that is the result of multiplication of current with argument', function() {
-			var mulResult = csr_dense.multiply(csr_denseT);
+			var mulResult = csr_dense.multiply(csr_denseTwo);
 
 			// Size
 			mulResult.getRowCount().should.equal(csr_dense.getRowCount());
-			mulResult.getColCount().should.equal(csr_denseT.getColCount());
+			mulResult.getColCount().should.equal(csr_denseTwo.getColCount());
 
 			// Content
+      		mulResult.getRowPointer().equalsV8(csr_multiply.getRowPointer()).should.be.true;
+      		mulResult.getColumnIndices().equalsV8(csr_multiply.getColumnIndices()).should.be.true;
+      		mulResult.getData().equalsV8(csr_multiply.getData()).should.be.true;			
 			mulResult.toDense().flatten().equalsV8(ddTMultiply).should.be.true;
 		})
   	})

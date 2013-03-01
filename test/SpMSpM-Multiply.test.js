@@ -52,7 +52,7 @@ describe('SpMSpM-Multiply', function(){
       var n = 6;
       var randomDense1 = f_generateBinaryMatrix(m,p);
       var randomDense2 = f_generateBinaryMatrix(p,n);
-
+/*
       var csr_randomDense1 = new csr_matrix({"fromdense": randomDense1, "numcols": p});
       var csr_randomDense2 = new csr_matrix({"fromdense": randomDense2, "numcols": n});      
 
@@ -70,10 +70,7 @@ describe('SpMSpM-Multiply', function(){
       csr_randomResult.getRowPointer().equalsV8(csr_randomResult_Verify.getRowPointer()).should.be.true;
       csr_randomResult.getColumnIndices().equalsV8(csr_randomResult_Verify.getColumnIndices()).should.be.true;
       csr_randomResult.getData().equalsV8(csr_randomResult_Verify.getData()).should.be.true;
-      // log( csr_randomResult.toDense().flatten().equalsV8( csr_randomResult_Verify.toDense().flatten() ) );
-      
-      // log( csr_randomResult.toString() );
-      // log( csr_randomResult_Verify.toString() );
+*/
     });     
   })  
 })
