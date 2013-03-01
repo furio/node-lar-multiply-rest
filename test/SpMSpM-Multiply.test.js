@@ -11,7 +11,7 @@ describe('SpMSpM-Multiply', function(){
          0,0,0,0,1,
          0,0,1,1,0];
 
-  var denseT = [1,0,0,0,
+  var denseT = [1,0,0,1,
           0,1,0,0,
           0,0,0,1,
           0,0,0,1,
@@ -50,9 +50,6 @@ describe('SpMSpM-Multiply', function(){
       var m = 4;
       var p = 5;
       var n = 6;
-
-      /*
-
       var randomDense1 = f_generateBinaryMatrix(m,p);
       var randomDense2 = f_generateBinaryMatrix(p,n);
 
@@ -62,12 +59,17 @@ describe('SpMSpM-Multiply', function(){
       var csr_randomResult = g_webcl.multiplyMatrix(csr_randomDense1, csr_randomDense2);
       var csr_randomResult_Verify = csr_randomDense1.multiply( csr_randomDense2 );
 
-      */
+      log(csr_randomDense1.toDense())
+      log(csr_randomDense2.toDense())
+      log(csr_randomResult.toDense())
+      log(csr_randomResult_Verify.toDense())
+      log(csr_randomResult.toString())
+      log(csr_randomResult_Verify.toString())
 
       //
-      // csr_randomResult.getRowPointer().equalsV8(csr_randomResult_Verify.getRowPointer()).should.be.true;
-      // csr_randomResult.getColumnIndices().equalsV8(csr_randomResult_Verify.getColumnIndices()).should.be.true;
-      // csr_randomResult.getData().equalsV8(csr_randomResult_Verify.getData()).should.be.true;
+      csr_randomResult.getRowPointer().equalsV8(csr_randomResult_Verify.getRowPointer()).should.be.true;
+      csr_randomResult.getColumnIndices().equalsV8(csr_randomResult_Verify.getColumnIndices()).should.be.true;
+      csr_randomResult.getData().equalsV8(csr_randomResult_Verify.getData()).should.be.true;
       // log( csr_randomResult.toDense().flatten().equalsV8( csr_randomResult_Verify.toDense().flatten() ) );
       
       // log( csr_randomResult.toString() );
