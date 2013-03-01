@@ -54,6 +54,12 @@ describe('csr_matrix', function(){
     	})    	
   	})
 
+  	describe('#isBinary()', function(){
+		it('should return true if data array contains only 1', function() {
+			csr_dense.isBinary().should.be.true;
+		})
+  	})  	
+
   	describe('#getRowPointer(true)', function(){
   		it('should return a Uint32Array', function() {
   			var ui32array = csr_dense.getRowPointer(true);

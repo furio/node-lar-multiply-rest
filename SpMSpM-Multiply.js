@@ -125,21 +125,28 @@ var f_multiplyMatrix = function(matA, matBx) {
     throw new Error(err);
   }
 
+  var canWeUseBinaryKernel = matA.isBinary() && matB.isBinary();
+
   try {
 	  // Create buffer for A and B no copy now
 	  var matA_rowptr = context.createBuffer(WebCL.MEM_READ_ONLY, matA.getRowPointer().length*Uint32Array.BYTES_PER_ELEMENT);
     f_clObject_add(matA_rowptr, clObjects);  
 	  var matA_colindices = context.createBuffer(WebCL.MEM_READ_ONLY, matA.getColumnIndices().length*Uint32Array.BYTES_PER_ELEMENT);
-    f_clObject_add(matA_colindices, clObjects); 
-	  var matA_data = context.createBuffer(WebCL.MEM_READ_ONLY, matA.getData().length*Float32Array.BYTES_PER_ELEMENT);
-    f_clObject_add(matA_data, clObjects); 
+    f_clObject_add(matA_colindices, clObjects);
+    if ( canWeUseBinaryKernel == false ) {
+      var matA_data = context.createBuffer(WebCL.MEM_READ_ONLY, matA.getData().length*Float32Array.BYTES_PER_ELEMENT);
+      f_clObject_add(matA_data, clObjects);       
+    }
+
 
 	  var matB_rowptr = context.createBuffer(WebCL.MEM_READ_ONLY, matB.getRowPointer().length*Uint32Array.BYTES_PER_ELEMENT);
     f_clObject_add(matB_rowptr, clObjects);
 	  var matB_colindices = context.createBuffer(WebCL.MEM_READ_ONLY, matB.getColumnIndices().length*Uint32Array.BYTES_PER_ELEMENT);
     f_clObject_add(matB_colindices, clObjects);
-	  var matB_data = context.createBuffer(WebCL.MEM_READ_ONLY, matB.getData().length*Float32Array.BYTES_PER_ELEMENT);  
-    f_clObject_add(matB_data, clObjects);
+    if ( canWeUseBinaryKernel == false ) {
+	   var matB_data = context.createBuffer(WebCL.MEM_READ_ONLY, matB.getData().length*Float32Array.BYTES_PER_ELEMENT);  
+      f_clObject_add(matB_data, clObjects);
+    }
 
 	  // Create buffer for C to read results
 	  var denseResult = context.createBuffer(WebCL.MEM_WRITE_ONLY, (matA.getRowCount()*matBx.getColCount())*Float32Array.BYTES_PER_ELEMENT);
@@ -152,7 +159,7 @@ var f_multiplyMatrix = function(matA, matBx) {
 
   // Create kernel object
   try {
-    var kernel = program.createKernel("spmm_kernel_naive");
+    var kernel = program.createKernel(( canWeUseBinaryKernel == true ) ? "spmm_binary_kernel_naive" : "spmm_kernel_naive");
     f_clObject_add(kernel, clObjects); 
   } catch(err) {
     f_clObject_clear(clObjects);
@@ -166,14 +173,18 @@ var f_multiplyMatrix = function(matA, matBx) {
   argcKernel += 1;
   kernel.setArg(argcKernel, matA_colindices);
   argcKernel += 1;
-  kernel.setArg(argcKernel, matA_data);
-  argcKernel += 1;
+  if ( canWeUseBinaryKernel == false ) {
+    kernel.setArg(argcKernel, matA_data);
+    argcKernel += 1;
+  }
   kernel.setArg(argcKernel, matB_rowptr);
   argcKernel += 1;
   kernel.setArg(argcKernel, matB_colindices);
   argcKernel += 1;
-  kernel.setArg(argcKernel, matB_data);
-  argcKernel += 1;
+  if ( canWeUseBinaryKernel == false ) {
+    kernel.setArg(argcKernel, matB_data);
+    argcKernel += 1;
+  }
   kernel.setArg(argcKernel, denseResult);
 
   // Create command queue
@@ -208,11 +219,15 @@ var f_multiplyMatrix = function(matA, matBx) {
 	  // and copy host contents
 	  queue.enqueueWriteBuffer(matA_rowptr, false, 0, matA.getRowPointer().length*Uint32Array.BYTES_PER_ELEMENT, matA.getRowPointer(true));
 	  queue.enqueueWriteBuffer(matA_colindices, false, 0, matA.getColumnIndices().length*Uint32Array.BYTES_PER_ELEMENT, matA.getColumnIndices(true));
-	  queue.enqueueWriteBuffer(matA_data, false, 0, matA.getData().length*Float32Array.BYTES_PER_ELEMENT, matA.getData(true));
+	  if ( canWeUseBinaryKernel == false ) {
+      queue.enqueueWriteBuffer(matA_data, false, 0, matA.getData().length*Float32Array.BYTES_PER_ELEMENT, matA.getData(true));
+    }
 
 	  queue.enqueueWriteBuffer(matB_rowptr, false, 0, matB.getRowPointer().length*Uint32Array.BYTES_PER_ELEMENT, matB.getRowPointer(true));
 	  queue.enqueueWriteBuffer(matB_colindices, false, 0, matB.getColumnIndices().length*Uint32Array.BYTES_PER_ELEMENT, matB.getColumnIndices(true));
-	  queue.enqueueWriteBuffer(matB_data, false, 0, matB.getData().length*Float32Array.BYTES_PER_ELEMENT, matB.getData(true));
+    if ( canWeUseBinaryKernel == false ) {
+	   queue.enqueueWriteBuffer(matB_data, false, 0, matB.getData().length*Float32Array.BYTES_PER_ELEMENT, matB.getData(true));
+    }
 
 	  // Execute (enqueue) kernel
 	  queue.enqueueNDRangeKernel(kernel, globalOff, globalWS, localWS);
@@ -235,66 +250,16 @@ var f_multiplyMatrix = function(matA, matBx) {
   return {"fromdense": MATRIX_RES, "numcols": matBx.getColCount()};
 };
 
-
-exports.multiplyMatrix = function(matA, matBx) { return new csr_matrix( f_multiplyMatrix(matA, matBx) ); };
-
-
-var f_test = function() {
-  var dense = [1,0,0,0,1,
-         0,1,0,0,0,
-         0,0,0,0,1,
-         0,0,1,1,0];
-
-  var denseT = [1,0,0,0,
-          0,1,0,0,
-          0,0,0,1,
-          0,0,0,1,
-          1,0,1,0];
-
-  var csr_dense = new csr_matrix({"fromdense": dense, "numcols": 5});
-  var csr_denseT = new csr_matrix({"fromdense": denseT, "numcols": 4});
-  // log(csr_dense);
-  // log(csr_denseT.transpose());
-  var csr_res = f_multiplyMatrix(csr_dense, csr_denseT);
-  csr_res = new csr_matrix(csr_res);
-  log(csr_res);
-  log(csr_res.toDense());
+var f_multiplyMatrixNewKern = function(matA, matBx) {
+  throw new Error("To be implemented");
 };
 
-var f_test2 = function(verify) {
-  verify = verify || false;
-  //
-  var arrayEqualsV8 = function(a,b) { return !(a<b || b<a); };
-  var arrayFlatten = function(c) { c.reduce(function(a, b) { return a.concat(b); }) };  
-  var modrand = require('./matrixGenerator.js').generateBinaryMatrix;
+exports.multiplyMatrix = function(matA, matBx, newKernel) {
+  newKernel = newKernel || false;
 
-  // Matrix dims
-  // m,n important for testing
-  var m = 23*24;
-  var p = 50;
-  var n = 31*31;
-
-  log("Creating random matrices: " + m + "x" + p + "," + p + "x" + n);
-  var dense = modrand(m,p);
-  var denseT = modrand(p,n);
-
-  log("Transforming into csr_matrix");
-  var csr_dense = new csr_matrix({"fromdense": dense, "numcols": p});
-  var csr_denseT = new csr_matrix({"fromdense": denseT, "numcols": n});
-
-  log("Calculating in WebCL the result of multiplication");
-  var csr_res = f_multiplyMatrix(csr_dense, csr_denseT);
-
-  log("Transforming into csr_matrix the WebCL result");
-  csr_res = new csr_matrix(csr_res);
-
-  if (verify) {
-    log("Calculating in plain JS the result of multiplication");
-    var verify = csr_dense.multiply( csr_denseT );
-
-    log("Are matrix equals: " + arrayEqualsV8( arrayFlatten(csr_res.toDense()), arrayFlatten(verify.toDense()) ) );
+  if ( newKernel ) {
+    return new csr_matrix( f_multiplyMatrixNewKern(matA, matBx) ); 
   }
-};
 
-// f_test();
-// f_test2(false);
+  return new csr_matrix( f_multiplyMatrix(matA, matBx) ); 
+};

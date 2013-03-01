@@ -51,6 +51,10 @@ csr_matrix.prototype.getData = function(useTypedArrays) {
 	}
 }
 
+csr_matrix.prototype.isBinary = function() {
+	return this.data.every(function(el) { return (el == 1); } );
+}
+
 csr_matrix.prototype.getRowCount = function() {
 	return this.numrow;
 }
