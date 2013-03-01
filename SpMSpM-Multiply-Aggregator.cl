@@ -2,7 +2,6 @@
 #define MAXROW %%AROW%%
 #define MAXCOL %%BCOL%%
 #define AGGRO_SIZE %%AGGROSIZE%%
-#define AGGRO_ARRAY_SIZE (AGGRO_SIZE * MAXROW)
 
 /*
 Idea create a local workSpace.Row * worSpace.Col * float2 ??? row*col < max_local ... max_local*float < local_size???
@@ -25,13 +24,15 @@ __kernel void spmm_kernel_naive(
 {
 	int currRow = get_global_id(0);
 	int currCol = get_global_id(1);
+	int locRow = get_local_id(0);
+	int locCol = get_local_id(1);
 
 	if( !(currRow < MAXROW) && (currCol < MAXCOL) )
 	{
 		return;
 	}
 	
-	__local float2 aggroStructure[AGGRO_ARRAY_SIZE];
+	__local float aggroStructure[AGGRO_SIZE];
 
 	int ArowCur = ArowPtr[currRow];
 	int ArowEnd = ArowPtr[currRow+1];
@@ -60,5 +61,10 @@ __kernel void spmm_kernel_naive(
 		}
 	}
 
-	denseVal[currRow*MAXCOL + currCol] = localSum;
+	aggroStructure[locRow*get_local_size(1)+locCol] = localSum;
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	if ((locRow == 0) && (locCol == 0)) {
+		// qui posso copiare nella mia sottosezione del dense
+	}
 }
