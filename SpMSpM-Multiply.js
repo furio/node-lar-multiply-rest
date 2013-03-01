@@ -5,10 +5,10 @@ var csr_matrix = require("./csrStuff").csr_matrix,
     log = console.log;
 
 // Platform const for my workspace
-NVIDIA = 0;
-INTEL = 1;
+var NVIDIA = 0;
+var INTEL = 1;
 //
-PLATFORM_IN_USE = NVIDIA;
+var PLATFORM_IN_USE = NVIDIA;
 
 // =======================================
 
@@ -87,8 +87,8 @@ var f_multiplyMatrix = function(matA, matBx) {
   var matB = matBx.transpose();
 
   //Pick platform
-  var platformList=WebCL.getPlatforms();
-  platform=platformList[PLATFORM_IN_USE];
+  var platformList = WebCL.getPlatforms();
+  var platform = platformList[PLATFORM_IN_USE];
   log('using platform: '+platform.getInfo(WebCL.PLATFORM_NAME));
   
   //Query the set of devices on this platform
@@ -144,7 +144,7 @@ var f_multiplyMatrix = function(matA, matBx) {
 	  var matB_colindices = context.createBuffer(WebCL.MEM_READ_ONLY, matB.getColumnIndices().length*Uint32Array.BYTES_PER_ELEMENT);
     f_clObject_add(matB_colindices, clObjects);
     if ( canWeUseBinaryKernel == false ) {
-	   var matB_data = context.createBuffer(WebCL.MEM_READ_ONLY, matB.getData().length*Float32Array.BYTES_PER_ELEMENT);  
+	    var matB_data = context.createBuffer(WebCL.MEM_READ_ONLY, matB.getData().length*Float32Array.BYTES_PER_ELEMENT);  
       f_clObject_add(matB_data, clObjects);
     }
 
@@ -254,12 +254,28 @@ var f_multiplyMatrixNewKern = function(matA, matBx) {
   throw new Error("To be implemented");
 };
 
-exports.multiplyMatrix = function(matA, matBx, newKernel) {
-  newKernel = newKernel || false;
+var f_commonStartup = function(matA, matBx, enableLogging, newKernel) {
+  if (enableLogging == false) {
+    log = function(){};
+  } else {
+    log = console.log;
+  }
 
   if ( newKernel ) {
     return new csr_matrix( f_multiplyMatrixNewKern(matA, matBx) ); 
   }
 
   return new csr_matrix( f_multiplyMatrix(matA, matBx) ); 
+};
+
+exports.multiplyMatrix = function(matA, matBx, enableLogging) {
+  enableLogging = enableLogging || false;
+
+  return f_commonStartup(matA, matBx, enableLogging, false);
+};
+
+exports.multiplyMatrixNew = function(matA, matBx, enableLogging) {
+  enableLogging = enableLogging || false;
+
+  return f_commonStartup(matA, matBx, enableLogging, true);
 };

@@ -165,7 +165,7 @@ var childServer = function(isCluster) {
 		log("Calculating multiplication");
 		var mulStep = null;
 		if (USE_WEBCL) {
-			mulStep = g_webcl.multiplyMatrix(csrA, csrB);
+			mulStep = g_webcl.multiplyMatrix(csrA, csrB, true);
 			callNodeGC();
 		} else {
 			mulStep = csrA.multiply( csrB );	

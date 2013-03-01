@@ -327,9 +327,9 @@ csr_matrix.prototype.multiply = function(matrix) {
 
 csr_matrix.prototype.toString = function() {
 	var outString = "Sparse Matrix ("+this.numrow+" x "+this.lastcolumn+") Nnz: "+this.nnz+"\n";
-	outString += "RowPtr" + this.rowptr + "\n";
-	outString += "Column Indices" + this.col + "\n";
-	outString += "Data" + this.data + "\n";	
+	outString += "RowPtr " + this.rowptr + "\n";
+	outString += "Column Indices " + this.col + "\n";
+	outString += "Data " + this.data + "\n";	
 
 	return outString;
 }
