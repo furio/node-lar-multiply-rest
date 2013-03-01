@@ -1,8 +1,9 @@
-csr_matrix = require("../csrStuff.js").csr_matrix;
+require("../array.prototype.js");
 f_generateBinaryMatrix = require("../matrixGenerator.js").generateBinaryMatrix;
+csr_matrix = require("../csrStuff.js").csr_matrix;
 
 should = require('should');
-log=console.log;
+log = console.log;
 
 describe('csr_matrix', function(){
 	var dense = [1,0,0,0,1,
@@ -20,9 +21,6 @@ describe('csr_matrix', function(){
 					   0,1,0,0,
 					   1,0,1,0,
 					   0,0,0,2];
-
-	var arrayEqualsV8 = function(a,b) { return !(a<b || b<a); };
-	var arrayFlatten = function(c) { c.reduce(function(a, b) { return a.concat(b); }) };
 
 	var csr_dense, csr_denseT, csr_multiply;
 
@@ -44,15 +42,15 @@ describe('csr_matrix', function(){
 		});
 
 		it('should contain proper rowPtr array [0, 2, 3, 4, 6]', function(){
-			arrayEqualsV8([0, 2, 3, 4, 6], csr_dense.getRowPointer()).should.be.true;
+			[0, 2, 3, 4, 6].equalsV8(csr_dense.getRowPointer()).should.be.true;
     	})
 
 		it('should contain proper colIndices array [0, 4, 1, 4, 2, 3]', function(){
-			arrayEqualsV8([0, 4, 1, 4, 2, 3], csr_dense.getColumnIndices()).should.be.true;
+			[0, 4, 1, 4, 2, 3].equalsV8(csr_dense.getColumnIndices()).should.be.true;
     	})
 
 		it('should contain proper data array [1, 1, 1, 1, 1, 1]', function(){
-			arrayEqualsV8([1, 1, 1, 1, 1, 1], csr_dense.getData()).should.be.true;
+			[1, 1, 1, 1, 1, 1].equalsV8(csr_dense.getData()).should.be.true;
     	})    	
   	})
 
@@ -63,8 +61,8 @@ describe('csr_matrix', function(){
   		})
 
   		it('should return a Uint32Array with the same length of getRowPointer(false)', function() {
-  			// var ui32array = csr_dense.getRowPointer(true);
-  			// ui32array.should.have.length(csr_dense.getRowPointer().length);
+  			var ui32array = csr_dense.getRowPointer(true);
+  			ui32array.should.have.length(csr_dense.getRowPointer().length);
   		})
 
   		it('should return a Uint32Array with the same content of getRowPointer(false)', function() {
@@ -112,7 +110,7 @@ describe('csr_matrix', function(){
 			var denseMatrix = csr_dense.toDense();
 			denseMatrix.should.have.length(csr_dense.getRowCount());
 
-			arrayEqualsV8(dense, arrayFlatten( denseMatrix )).should.be.true;
+			dense.equalsV8( denseMatrix.flatten() ).should.be.true;
 		})
 
 		it('should return an Array of Array that represents a dense matrix (random binary matrix)', function() {
@@ -120,7 +118,7 @@ describe('csr_matrix', function(){
 			var dense = f_generateBinaryMatrix(5,columnLen);
 			var mat = new csr_matrix({"fromdense": dense, "numcols": columnLen});
 
-			arrayEqualsV8(dense, arrayFlatten( mat.toDense() )).should.be.true;
+			dense.equalsV8( mat.toDense().flatten() ).should.be.true;
 		})		
   	})
 
@@ -131,9 +129,9 @@ describe('csr_matrix', function(){
 			transposedDense.getRowCount().should.equal(csr_denseT.getRowCount());
 			transposedDense.getColCount().should.equal(csr_denseT.getColCount());
 
-			arrayEqualsV8(transposedDense.getRowPointer(), csr_denseT.getRowPointer()).should.be.true;
-			arrayEqualsV8(transposedDense.getColumnIndices(), csr_denseT.getColumnIndices()).should.be.true;
-			arrayEqualsV8(transposedDense.getData(), csr_denseT.getData()).should.be.true;
+			transposedDense.getRowPointer().equalsV8(csr_denseT.getRowPointer()).should.be.true;
+			transposedDense.getColumnIndices().equalsV8(csr_denseT.getColumnIndices()).should.be.true;
+			transposedDense.getData().equalsV8(csr_denseT.getData()).should.be.true;
 		})
 
 		it('should return a the same csr_matrix if applied two times', function() {
@@ -142,9 +140,9 @@ describe('csr_matrix', function(){
 			transposedDense.getRowCount().should.equal(csr_dense.getRowCount());
 			transposedDense.getColCount().should.equal(csr_dense.getColCount());
 
-			arrayEqualsV8(transposedDense.getRowPointer(), csr_dense.getRowPointer()).should.be.true;
-			arrayEqualsV8(transposedDense.getColumnIndices(), csr_dense.getColumnIndices()).should.be.true;
-			arrayEqualsV8(transposedDense.getData(), csr_dense.getData()).should.be.true;
+			transposedDense.getRowPointer().equalsV8(csr_dense.getRowPointer()).should.be.true;
+			transposedDense.getColumnIndices().equalsV8(csr_dense.getColumnIndices()).should.be.true;
+			transposedDense.getData().equalsV8(csr_dense.getData()).should.be.true;
 		})		
   	})
 
@@ -157,7 +155,7 @@ describe('csr_matrix', function(){
 			mulResult.getColCount().should.equal(csr_denseT.getColCount());
 
 			// Content
-			arrayEqualsV8(arrayFlatten(mulResult.toDense()), ddTMultiply).should.be.true;
+			mulResult.toDense().flatten().equalsV8(ddTMultiply).should.be.true;
 		})
   	})
 })
