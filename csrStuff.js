@@ -236,25 +236,69 @@ csr_matrix.prototype.multiply = function(matrix) {
 	if ((matrix instanceof csr_matrix) === false) {
 		throw new Error("Invalid matrix");
 	}
-/*
-	// WARN: Commented for python-bridge
-	if ( this.getColCount() != matrix.getRowCount() ) {
-		throw new Error("Invalid matrix size");
+
+	return this.__denseMultiply(matrix);
+}
+
+csr_matrix.prototype.__denseMultiply = function(matrix) {
+	var argMatrix = matrix.transpose();
+    var denseResult = new Array(this.getRowCount() * matrix.getColCount());
+
+    for (var i = 0; i < this.getRowCount(); i++) {
+		for (var j = 0; j < argMatrix.getRowCount(); j++) {
+
+			var ArowCur = this.getRowPointer()[i],
+				ArowEnd = this.getRowPointer()[i + 1],
+				curPosA = ArowCur;
+
+			var BrowCur = argMatrix.getRowPointer()[j],
+				BrowEnd = argMatrix.getRowPointer()[j + 1],
+				curPosB = BrowCur;
+
+			var AcurIdx = this.getColumnIndices()[ArowCur],
+				BcurIdx = argMatrix.getColumnIndices()[BrowCur];
+
+            var localSum = 0;
+
+            while ((curPosA < ArowEnd) && (curPosB < BrowEnd)) {
+				AcurIdx = this.getColumnIndices()[curPosA];
+				BcurIdx = argMatrix.getColumnIndices()[curPosB];
+
+				if (AcurIdx == BcurIdx) {
+					localSum += this.getData()[curPosA] * argMatrix.getData()[curPosB];
+					curPosA++;
+					curPosB++;
+				} else if (AcurIdx < BcurIdx) {
+					curPosA++;
+				} else {
+					curPosB++;
+				}
+			}
+
+			denseResult[i*matrix.getColCount()+ j] = localSum;
+		}
 	}
-*/
+
+	return new csr_matrix({"fromdense": denseResult, "numcols": matrix.getColCount()});
+}
+
+// TODO: Broken in column index multiplication. Need to debug
+csr_matrix.prototype.__csrMultiply = function(matrix) {
+	var baseFiller = this.baseIndex - 1;
+	//
 	var newRowCount = this.getRowCount();
 	var newColCount = matrix.getColCount();
 
-	var tmpCol = this.__newFilledArray(newColCount, -1);
+	var tmpCol = this.__newFilledArray(newColCount, baseFiller);
 	var newRow = this.__newFilledArray(newRowCount+1, 0);
 
 	// Primo step
 	var i = 0, k = 0, j = 0, l = 0, cntLoop = 0;
-	for(i = 0; i < newRowCount; i++) {
+	for(i = 0; i < newRowCount; ++i) {
 		cntLoop = 0;
 
-		for(k = this.getRowPointer()[i]; k < this.getRowPointer()[i+1]; k++ ) {
-			for(j = matrix.getRowPointer()[this.getColumnIndices()[k]]; j < matrix.getRowPointer()[this.getColumnIndices()[k]+1]; j++ ){
+		for(k = this.getRowPointer()[i]; k < this.getRowPointer()[i+1]; ++k ) {
+			for(j = matrix.getRowPointer()[this.getColumnIndices()[k]]; j < matrix.getRowPointer()[this.getColumnIndices()[k]+1]; ++j ){
 				for(l = 0; l < cntLoop; l++ ) {
 					if (tmpCol[l] == matrix.getColumnIndices()[j]) {
 						break;
@@ -269,23 +313,23 @@ csr_matrix.prototype.multiply = function(matrix) {
 		}
 
 		newRow[i+1] = cntLoop;
- 		for (j=0; j < cntLoop; j++) {
-			tmpCol[j] = -1;
+ 		for (j=0; j < cntLoop; ++j) {
+			tmpCol[j] = baseFiller;
 		}
 	}
 
-	for(i=0; i < newRowCount; i++) {
+	for(i=0; i < newRowCount; ++i) {
 		newRow[i+1] += newRow[i];
 	}
 
 	// secondo step
 	var newCol = this.__newFilledArray(newRow[newRowCount], 0);
 
-	for (i = 0; i < newRowCount; i++) {
+	for (i = 0; i < newRowCount; ++i) {
 		var countTmpCol = 0;
 		cntLoop = newRow[i];
-		for (k = this.getRowPointer()[i]; k < this.getRowPointer()[i+1]; k++) {
-			for (j = matrix.getRowPointer()[this.getColumnIndices()[k]]; j < matrix.getRowPointer()[this.getColumnIndices()[k]+1]; j++) {
+		for (k = this.getRowPointer()[i]; k < this.getRowPointer()[i+1]; ++k) {
+			for (j = matrix.getRowPointer()[this.getColumnIndices()[k]]; j < matrix.getRowPointer()[this.getColumnIndices()[k]+1]; ++j) {
 				for (l = 0; l < countTmpCol; l++) {
 					if (tmpCol[l] == matrix.getColumnIndices()[j]) {
 						break;	
@@ -302,17 +346,17 @@ csr_matrix.prototype.multiply = function(matrix) {
 		}
  
 		for (j=0; j < countTmpCol; j++) {
-			tmpCol[j] = -1;	
+			tmpCol[j] = baseFiller;	
 		} 
 	}
 
 	// terzo step
 	var newData = this.__newFilledArray(newRow[newRowCount], 0);
 
-	for (i = 0; i < newRowCount; i++) {
-		for ( j = newRow[i]; j < newRow[i+1]; j++) {
-			// newData[j] = 0;
-			for (k = this.getRowPointer()[i]; k < this.getRowPointer()[i+1]; k++) {
+	for (i = 0; i < newRowCount; ++i) {
+		for ( j = newRow[i]; j < newRow[i+1]; ++j) {
+			newData[j] = 0;
+			for (k = this.getRowPointer()[i]; k < this.getRowPointer()[i+1]; ++k) {
 				for ( l = matrix.getRowPointer()[this.getColumnIndices()[k]]; l < matrix.getRowPointer()[this.getColumnIndices()[k]+1]; l++) {
 					if (matrix.getColumnIndices()[l] == newCol[j]) {
 						newData[j] += this.getData()[k] * matrix.getData()[l];
