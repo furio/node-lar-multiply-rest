@@ -1,4 +1,4 @@
-exports.csr_matrix = csr_matrix;
+require("./array.prototype.js");
 
 function csr_matrix(objargs) {
 	// CSR Data
@@ -369,6 +369,24 @@ csr_matrix.prototype.__csrMultiply = function(matrix) {
 	return new csr_matrix({"numrows": newRowCount, "numcols": newColCount, "rowptr": newRow, "colindices": newCol, "data": newData});
 }
 
+csr_matrix.prototype.equals = function(other) {
+	if ((other instanceof csr_matrix) === false) {
+		return false;
+	}
+
+	// It's me!
+	if ( this === other ) {
+		return true;	
+	} 
+
+	return 	( this.getRowCount() == other.getRowCount() ) &&
+			( this.getColCount() == other.getColCount() ) &&
+			( this.getNonZeroElementsCount() == other.getNonZeroElementsCount() ) &&
+			this.getRowPointer().equalsV8(other.getRowPointer()) &&
+			this.getColumnIndices().equalsV8(other.getColumnIndices()) &&
+			this.getData().equalsV8(other.getData());
+}
+
 csr_matrix.prototype.toString = function() {
 	var outString = "Sparse Matrix ("+this.numrow+" x "+this.lastcolumn+") Nnz: "+this.nnz+"\n";
 	outString += "RowPtr " + this.rowptr + "\n";
@@ -393,3 +411,5 @@ csr_matrix.prototype.__newFilledArray = function(len, val) {
     }
     return a;
 }
+
+exports.csr_matrix = csr_matrix;

@@ -1,4 +1,3 @@
-require("../array.prototype.js");
 f_generateBinaryMatrix = require("../matrixGenerator.js").generateBinaryMatrix;
 csr_matrix = require("../csrStuff.js").csr_matrix;
 
@@ -38,9 +37,7 @@ describe('SpMSpM-Multiply', function(){
       var csr_result = g_webcl.multiplyMatrix(csr_dense, csr_denseT);
 
       //
-      csr_result.getRowPointer().equalsV8(csr_multiply.getRowPointer()).should.be.true;
-      csr_result.getColumnIndices().equalsV8(csr_multiply.getColumnIndices()).should.be.true;
-      csr_result.getData().equalsV8(csr_multiply.getData()).should.be.true;
+      csr_result.equals(csr_multiply).should.be.true;
     });     
   })
 
@@ -59,19 +56,8 @@ describe('SpMSpM-Multiply', function(){
       var csr_randomResult = g_webcl.multiplyMatrix(csr_randomDense1, csr_randomDense2);
       var csr_randomResult_Verify = csr_randomDense1.multiply( csr_randomDense2 );
 
-      /*
-      log(csr_randomDense1.toDense())
-      log(csr_randomDense2.toDense())
-      log(csr_randomResult.toDense())
-      log(csr_randomResult_Verify.toDense())
-      log(csr_randomResult.toString())
-      log(csr_randomResult_Verify.toString())
-      */
-
       //
-      csr_randomResult.getRowPointer().equalsV8(csr_randomResult_Verify.getRowPointer()).should.be.true;
-      csr_randomResult.getColumnIndices().equalsV8(csr_randomResult_Verify.getColumnIndices()).should.be.true;
-      csr_randomResult.getData().equalsV8(csr_randomResult_Verify.getData()).should.be.true;
+      csr_randomResult.equals(csr_randomResult_Verify).should.be.true;
     });     
   })  
 })

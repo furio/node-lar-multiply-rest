@@ -136,27 +136,39 @@ describe('csr_matrix', function(){
 		})		
   	})
 
+  	describe('#equals(object)', function(){
+		it('should return false if argument is null', function() {
+			csr_dense.equals( null ).should.be.false;
+		})
+
+		it('should return false if argument is not of type "csr_matrix"', function() {
+			csr_dense.equals( new Object() ).should.be.false;
+		})
+		  		
+		it('should return true if argument is self', function() {
+			csr_dense.equals( csr_dense ).should.be.true;
+		})
+
+		it('should return true if argument is another csr_matrix with same content', function() {
+			csr_dense.equals( new csr_matrix({"fromdense": dense, "numcols": 5}) ).should.be.true;
+		})
+
+		it('should return false if argument is not self or not same content', function() {
+			csr_dense.equals( csr_denseT ).should.be.false;
+		})		
+  	})
+
   	describe('#transpose()', function(){
 		it('should return a new properly transposed csr_matrix', function() {
 			var transposedDense = csr_dense.transpose();
 
-			transposedDense.getRowCount().should.equal(csr_denseT.getRowCount());
-			transposedDense.getColCount().should.equal(csr_denseT.getColCount());
-
-			transposedDense.getRowPointer().equalsV8(csr_denseT.getRowPointer()).should.be.true;
-			transposedDense.getColumnIndices().equalsV8(csr_denseT.getColumnIndices()).should.be.true;
-			transposedDense.getData().equalsV8(csr_denseT.getData()).should.be.true;
+			transposedDense.equals(csr_denseT).should.be.true;
 		})
 
 		it('should return a the same csr_matrix if applied two times', function() {
 			var transposedDense = csr_dense.transpose().transpose();
 
-			transposedDense.getRowCount().should.equal(csr_dense.getRowCount());
-			transposedDense.getColCount().should.equal(csr_dense.getColCount());
-
-			transposedDense.getRowPointer().equalsV8(csr_dense.getRowPointer()).should.be.true;
-			transposedDense.getColumnIndices().equalsV8(csr_dense.getColumnIndices()).should.be.true;
-			transposedDense.getData().equalsV8(csr_dense.getData()).should.be.true;
+			transposedDense.equals(csr_dense).should.be.true;
 		})		
   	})
 
@@ -164,15 +176,7 @@ describe('csr_matrix', function(){
 		it('should return a new csr_matrix that is the result of multiplication of current with argument', function() {
 			var mulResult = csr_dense.multiply(csr_denseTwo);
 
-			// Size
-			mulResult.getRowCount().should.equal(csr_dense.getRowCount());
-			mulResult.getColCount().should.equal(csr_denseTwo.getColCount());
-
-			// Content
-      		mulResult.getRowPointer().equalsV8(csr_multiply.getRowPointer()).should.be.true;
-      		mulResult.getColumnIndices().equalsV8(csr_multiply.getColumnIndices()).should.be.true;
-      		mulResult.getData().equalsV8(csr_multiply.getData()).should.be.true;			
-			mulResult.toDense().flatten().equalsV8(ddTMultiply).should.be.true;
+			mulResult.equals(csr_multiply).should.be.true;
 		})
   	})
 })
