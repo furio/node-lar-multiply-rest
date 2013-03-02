@@ -4,7 +4,7 @@ f_generateBinaryMatrix = require("../matrixGenerator.js").generateBinaryMatrix;
 should = require('should');
 log = console.log;
 
-describe('generateBinaryMatrix', function(){
+describe('sparseMatrixGenerator', function(){
 	describe('#(20,20)', function(){
 		it('should return 20x20 array', function(){
 			f_generateBinaryMatrix(20,20).should.have.length(20*20);
