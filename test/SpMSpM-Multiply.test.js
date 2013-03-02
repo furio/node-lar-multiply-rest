@@ -21,7 +21,7 @@ describe('SpMSpM-Multiply', function(){
              1,1,0,1,
              0,0,0,2];
 
-  var csr_dense, csr_denseT, csr_multiply, g_webcl; 
+  var csr_dense, csr_denseT, csr_multiply, g_webcl;
 
   before(function(){
     csr_dense = new csr_matrix({"fromdense": dense, "numcols": 5});
@@ -30,7 +30,7 @@ describe('SpMSpM-Multiply', function(){
 
     // this will fail and stop this test suite, if node-webcl is not present
     g_webcl = require("../SpMSpM-Multiply.js");
-  })
+  });
 
   describe('multiplyMatrix(csr_dense,csr_denseT)', function(){
     it('should return a csr matrix equal to csr_multiply', function(){
@@ -38,8 +38,8 @@ describe('SpMSpM-Multiply', function(){
 
       //
       csr_result.equals(csr_multiply).should.be.true;
-    });     
-  })
+    });
+  });
 
   describe('multiplyMatrix(randomMatrix,randomMatrix)', function(){
     it('should return a csr matrix with correct content', function(){
@@ -51,13 +51,13 @@ describe('SpMSpM-Multiply', function(){
       var randomDense2 = f_generateBinaryMatrix(p,n);
 
       var csr_randomDense1 = new csr_matrix({"fromdense": randomDense1, "numcols": p});
-      var csr_randomDense2 = new csr_matrix({"fromdense": randomDense2, "numcols": n});      
+      var csr_randomDense2 = new csr_matrix({"fromdense": randomDense2, "numcols": n});
 
       var csr_randomResult = g_webcl.multiplyMatrix(csr_randomDense1, csr_randomDense2);
       var csr_randomResult_Verify = csr_randomDense1.multiply( csr_randomDense2 );
 
       //
       csr_randomResult.equals(csr_randomResult_Verify).should.be.true;
-    });     
-  })  
-})
+    });
+  });
+});

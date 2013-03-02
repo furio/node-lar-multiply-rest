@@ -43,7 +43,7 @@ var getGoodSingleSize = function(X,Z,MINIMUM_DIVISORS,MAXIMUM_TRIES) {
 
   //
   throw new Error("Cannot find a suitable couple of divisors!");
-}
+};
 
 var getGoodSizes = function(M,N,Z) {
   var maxSqrt = Math.ceil( Math.sqrt(Z) );
@@ -63,7 +63,7 @@ var getGoodSizes = function(M,N,Z) {
 
 var f_clObject_add = function(obj, array) {
   array.push(obj);
-}
+}:
 
 var f_clObject_clear = function(array) {
   array = array.reverse();
@@ -71,13 +71,13 @@ var f_clObject_clear = function(array) {
     el.release();
   });
   array.length = 0;
-}
+};
 
 // =======================================
 
 var f_multiplyMatrix = function(matA, matBx) {
-	if (WebCL == undefined) {
-	  throw new Error("Unfortunately your system does not support WebCL. Make sure that you have the WebCL extension installed.");
+	if (WebCL === undefined) {
+    throw new Error("Unfortunately your system does not support WebCL. Make sure that you have the WebCL extension installed.");
 	}
 
   // Keep reference of objects to call release
@@ -102,11 +102,11 @@ var f_multiplyMatrix = function(matA, matBx) {
       deviceType: WebCL.DEVICE_TYPE_DEFAULT, 
       platform: platform
     });
-    f_clObject_add(context, clObjects);    
+    f_clObject_add(context, clObjects);
   } catch(err) {
     f_clObject_clear(clObjects);
     log("Context error: " + err);
-    throw new Error(err);    
+    throw new Error(err);
   }
 
   //Create and program from source

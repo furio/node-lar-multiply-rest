@@ -36,7 +36,7 @@ describe('csr_matrix', function(){
 		csr_denseT = new csr_matrix({"fromdense": denseT, "numcols": 4});
 		csr_denseTwo = new csr_matrix({"fromdense": denseTwo, "numcols": 4});
 		csr_multiply = new csr_matrix({"fromdense": ddTMultiply, "numcols": 4});
-	})
+	});
 
 	describe('#({"fromdense":"['+dense+']","numcols":"5"})', function(){
 		it('should return 4x5 csr_matrix', function(){
@@ -51,7 +51,7 @@ describe('csr_matrix', function(){
 
 		it('should contain proper rowPtr array [0, 2, 3, 4, 6]', function(){
 			[0, 2, 3, 4, 6].equalsV8(csr_dense.getRowPointer()).should.be.true;
-    	})
+		});
 
 		it('should contain proper colIndices array [0, 4, 1, 4, 2, 3]', function(){
 			[0, 4, 1, 4, 2, 3].equalsV8(csr_dense.getColumnIndices()).should.be.true;

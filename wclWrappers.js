@@ -1,10 +1,10 @@
-WebCL = require('node-webcl');
-fs = require('fs');
-log = console.log;
+var WebCL = require('node-webcl'),
+	fs = require('fs'),
+	log = console.log;
 
-if (WebCL == undefined) {
-  throw new Error("Unfortunately your system does not support WebCL. Make sure that you have the WebCL extension installed.");
-  return;
+if (WebCL === undefined) {
+	throw new Error("Unfortunately your system does not support WebCL. Make sure that you have the WebCL extension installed.");
+	return;
 }
 
 function WCLWrapContext() {
