@@ -23,9 +23,9 @@ csr_matrix.prototype.getRowPointer = function(useTypedArrays) {
 		this.rowptr.forEach(function(i,idx) { tmp_rowptr[idx] = i; } );
 		return tmp_rowptr;
 	} else {
-		return this.rowptr;	
+		return this.rowptr;
 	}
-}
+};
 
 csr_matrix.prototype.getColumnIndices = function(useTypedArrays) {
 	useTypedArrays = useTypedArrays || false;
@@ -35,9 +35,9 @@ csr_matrix.prototype.getColumnIndices = function(useTypedArrays) {
 		this.col.forEach(function(i,idx) { tmp_col[idx] = i; } );
 		return tmp_col;
 	} else {
-		return this.col;	
+		return this.col;
 	}
-}
+};
 
 csr_matrix.prototype.getData = function(useTypedArrays) {
 	useTypedArrays = useTypedArrays || false;
@@ -47,25 +47,25 @@ csr_matrix.prototype.getData = function(useTypedArrays) {
 		this.data.forEach(function(i,idx) { tmp_data[idx] = i; } );
 		return tmp_data;
 	} else {
-		return this.data;	
+		return this.data;
 	}
-}
+};
 
 csr_matrix.prototype.isBinary = function() {
 	return this.data.every(function(el) { return (el == 1); } );
-}
+};
 
 csr_matrix.prototype.getRowCount = function() {
 	return this.numrow;
-}
+};
 
 csr_matrix.prototype.getColCount = function() {
 	return this.lastcolumn;
-}
+};
 
 csr_matrix.prototype.getNonZeroElementsCount = function() {
 	return this.nnz;
-}
+};
 
 csr_matrix.prototype.loadData = function(objargs) {
 	// possibili casi
@@ -73,15 +73,17 @@ csr_matrix.prototype.loadData = function(objargs) {
 		objargs.numcols = 0;
 	}
 
+	var tmp_rowptr, tmp_col, tmp_colMax, tmp_data;
+
 	if (objargs.hasOwnProperty("numrows") && objargs.hasOwnProperty("rowptr") && objargs.hasOwnProperty("colindices") && objargs.hasOwnProperty("data")) {
 		if (objargs.colindices.length != objargs.data.length) {
 			throw new Error('Expected objargs.colindices.length == objargs.data.length');
 		}
 
-		var tmp_rowptr = new Array(objargs.rowptr.length);
-		var tmp_col = new Array(objargs.colindices.length);
-		var tmp_colMax = 0;
-		var tmp_data = new Array(objargs.data.length);
+		tmp_rowptr = new Array(objargs.rowptr.length);
+		tmp_col = new Array(objargs.colindices.length);
+		tmp_colMax = 0;
+		tmp_data = new Array(objargs.data.length);
 
 		objargs.rowptr.forEach(function(i,idx) { tmp_rowptr[idx] = i; } );
 		objargs.colindices.forEach(function(i,idx) { tmp_col[idx] = i; tmp_colMax = Math.max(tmp_colMax,i+1); } );
@@ -96,10 +98,10 @@ csr_matrix.prototype.loadData = function(objargs) {
 
 	} else if (objargs.hasOwnProperty("numrows") && objargs.hasOwnProperty("rowptr") && objargs.hasOwnProperty("colindices")) {
 
-		var tmp_rowptr = new Array(objargs.rowptr.length);
-		var tmp_col = new Array(objargs.colindices.length);
-		var tmp_colMax = 0;
-		var tmp_data = new Array(objargs.colindices.length);
+		tmp_rowptr = new Array(objargs.rowptr.length);
+		tmp_col = new Array(objargs.colindices.length);
+		tmp_colMax = 0;
+		tmp_data = new Array(objargs.colindices.length);
 
 		objargs.rowptr.forEach(function(i,idx) { tmp_rowptr[idx] = i; } );
 		objargs.colindices.forEach(function(i,idx) { tmp_col[idx] = i; tmp_colMax = Math.max(tmp_colMax,i+1); } );
@@ -115,9 +117,9 @@ csr_matrix.prototype.loadData = function(objargs) {
 	} else if (objargs.hasOwnProperty("size")) {
 		// 0 everywhere
 
-		this.rowptr = new Array();
-		this.col = new Array();
-		this.data = new Array();
+		this.rowptr = [];
+		this.col = [];
+		this.data = [];
 
 		this.numrow = objargs.size.row;
 		this.lastcolumn = objargs.size.col;
@@ -126,9 +128,9 @@ csr_matrix.prototype.loadData = function(objargs) {
 	} else if (objargs.hasOwnProperty("fromtriples")) {
 		// leggi da file le triple e genera
 	} else if (objargs.hasOwnProperty("fromdense") && (objargs.numcols > 0)) {
-		var tmp_rowPtr = new Array();
-		var tmp_colIdx = new Array();
-		var tmp_data = new Array();
+		tmp_rowptr = [];
+		tmp_col = [];
+		tmp_data = [];
 		var nnz = 0;
 		var colIdx = 0;
 		var rowCount = 0;
@@ -136,12 +138,12 @@ csr_matrix.prototype.loadData = function(objargs) {
 
 		for (var i = 0; i < objargs.fromdense.length; i++, colIdx++) {
 			if (prevRow != rowCount) {
-				tmp_rowPtr.push( nnz );
+				tmp_rowptr.push( nnz );
 				prevRow = rowCount;
 			}
 
-			if ( objargs.fromdense[i] != 0 ) {
-				tmp_colIdx.push( colIdx );
+			if ( objargs.fromdense[i] !== 0 ) {
+				tmp_col.push( colIdx );
 				tmp_data.push( objargs.fromdense[i] );
 				nnz += 1;
 			}
@@ -149,31 +151,31 @@ csr_matrix.prototype.loadData = function(objargs) {
 			if ((colIdx+1) == objargs.numcols) {
 				colIdx = -1;
 				rowCount += 1;
-			}		
+			}
 		}
 
 		// Add last nnz
-		tmp_rowPtr.push( tmp_data.length );	
+		tmp_rowptr.push( tmp_data.length );
 
-		this.loadData({"numrows": rowCount, "numcols": objargs.numcols, "rowptr": tmp_rowPtr, "colindices": tmp_colIdx, "data": tmp_data});
+		this.loadData({"numrows": rowCount, "numcols": objargs.numcols, "rowptr": tmp_rowptr, "colindices": tmp_col, "data": tmp_data});
 	}
-}
+};
 
 csr_matrix.prototype.transpose = function() {
 	// private function
 	var f_transposeEnum = function(inputArray, maxN, outputArray) {
-	  if (maxN == 0) {
-	  	return;
-	  }
-	    
-	  outputArray[0] = 0;
-	  for (var i = 1; i <= maxN; i++) {
-	  	outputArray[i] = outputArray[i - 1] + inputArray[i - 1];
-	  }
+		if (maxN === 0) {
+			return;
+		}
+
+		outputArray[0] = 0;
+		for (var i = 1; i <= maxN; i++) {
+			outputArray[i] = outputArray[i - 1] + inputArray[i - 1];
+		}
 	};
 
 	// lookup
-	var m = this.numrow; 
+	var m = this.numrow;
 	var n = this.lastcolumn;
 	var base = this.baseIndex;
 
@@ -217,7 +219,7 @@ csr_matrix.prototype.transpose = function() {
 	}
 
 	return new csr_matrix({"numrows": n, "numcols": m, "rowptr": newPtr, "colindices": newCol, "data": newData});
-}
+};
 
 csr_matrix.prototype.toDense = function() {
 	var rowArray = new Array(this.getRowCount());
@@ -230,7 +232,7 @@ csr_matrix.prototype.toDense = function() {
 	}
 
 	return rowArray;
-}
+};
 
 csr_matrix.prototype.multiply = function(matrix) {
 	if ((matrix instanceof csr_matrix) === false) {
@@ -238,7 +240,7 @@ csr_matrix.prototype.multiply = function(matrix) {
 	}
 
 	return this.__denseMultiply(matrix);
-}
+};
 
 csr_matrix.prototype.__denseMultiply = function(matrix) {
 	var argMatrix = matrix.transpose();
@@ -280,7 +282,7 @@ csr_matrix.prototype.__denseMultiply = function(matrix) {
 	}
 
 	return new csr_matrix({"fromdense": denseResult, "numcols": matrix.getColCount()});
-}
+};
 
 // TODO: Broken in column index multiplication. Need to debug
 csr_matrix.prototype.__csrMultiply = function(matrix) {
@@ -313,7 +315,7 @@ csr_matrix.prototype.__csrMultiply = function(matrix) {
 		}
 
 		newRow[i+1] = cntLoop;
- 		for (j=0; j < cntLoop; ++j) {
+		for (j=0; j < cntLoop; ++j) {
 			tmpCol[j] = baseFiller;
 		}
 	}
@@ -332,10 +334,10 @@ csr_matrix.prototype.__csrMultiply = function(matrix) {
 			for (j = matrix.getRowPointer()[this.getColumnIndices()[k]]; j < matrix.getRowPointer()[this.getColumnIndices()[k]+1]; ++j) {
 				for (l = 0; l < countTmpCol; l++) {
 					if (tmpCol[l] == matrix.getColumnIndices()[j]) {
-						break;	
-					} 
+						break;
+					}
 				}
-				
+
 				if (l == countTmpCol) {
 					newCol[cntLoop] = matrix.getColumnIndices()[j];
 					tmpCol[countTmpCol] = matrix.getColumnIndices()[j];
@@ -344,10 +346,10 @@ csr_matrix.prototype.__csrMultiply = function(matrix) {
 				}
 			}
 		}
- 
+
 		for (j=0; j < countTmpCol; j++) {
-			tmpCol[j] = baseFiller;	
-		} 
+			tmpCol[j] = baseFiller;
+		}
 	}
 
 	// terzo step
@@ -367,7 +369,7 @@ csr_matrix.prototype.__csrMultiply = function(matrix) {
 	}
 
 	return new csr_matrix({"numrows": newRowCount, "numcols": newColCount, "rowptr": newRow, "colindices": newCol, "data": newData});
-}
+};
 
 csr_matrix.prototype.equals = function(other) {
 	if ((other instanceof csr_matrix) === false) {
@@ -376,33 +378,33 @@ csr_matrix.prototype.equals = function(other) {
 
 	// It's me!
 	if ( this === other ) {
-		return true;	
-	} 
+		return true;
+	}
 
-	return 	( this.getRowCount() == other.getRowCount() ) &&
+	return	( this.getRowCount() == other.getRowCount() ) &&
 			( this.getColCount() == other.getColCount() ) &&
 			( this.getNonZeroElementsCount() == other.getNonZeroElementsCount() ) &&
 			this.getRowPointer().equalsV8(other.getRowPointer()) &&
 			this.getColumnIndices().equalsV8(other.getColumnIndices()) &&
 			this.getData().equalsV8(other.getData());
-}
+};
 
 csr_matrix.prototype.toString = function() {
 	var outString = "Sparse Matrix ("+this.numrow+" x "+this.lastcolumn+") Nnz: "+this.nnz+"\n";
 	outString += "RowPtr " + this.rowptr + "\n";
 	outString += "Column Indices " + this.col + "\n";
-	outString += "Data " + this.data + "\n";	
+	outString += "Data " + this.data + "\n";
 
 	return outString;
-}
+};
 
 csr_matrix.prototype.toJSON = function() {
-	return {"ROW" : this.getRowPointer(), 
-			"COL": this.getColumnIndices(), 
-			"DATA": this.getData(), 
-			"ROWCOUNT": this.getRowCount(), 
+	return {"ROW" : this.getRowPointer(),
+			"COL": this.getColumnIndices(),
+			"DATA": this.getData(),
+			"ROWCOUNT": this.getRowCount(),
 			"COLCOUNT": this.getColCount()};
-}
+};
 
 csr_matrix.prototype.__newFilledArray = function(len, val) {
     var a = [];
@@ -410,6 +412,6 @@ csr_matrix.prototype.__newFilledArray = function(len, val) {
         a.push(val);
     }
     return a;
-}
+};
 
 exports.csr_matrix = csr_matrix;

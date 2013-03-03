@@ -4,7 +4,6 @@ var WebCL = require('node-webcl'),
 
 if (WebCL === undefined) {
 	throw new Error("Unfortunately your system does not support WebCL. Make sure that you have the WebCL extension installed.");
-	return;
 }
 
 function WCLWrapContext() {
@@ -15,33 +14,33 @@ function WCLWrapContext() {
 
 WCLWrapContext.prototype.getPlatforms = function() {
 	return WebCL.getPlatforms();
-}
+};
 
 WCLWrapContext.prototype.getCurrentPlatform = function() {
 	return this.currentPlatform;
-}
+};
 
 WCLWrapContext.prototype.getDevices = function() {
 	return this.currentPlatform.getDevices(WebCL.DEVICE_TYPE_ALL);
-}
+};
 
 WCLWrapContext.prototype.getCurrentDevices = function() {
 	return this.currentDevices;
-}
+};
 
 WCLWrapContext.prototype.getCurrentContext = function() {
 	return this.currentContext;
-}
+};
 
 WCLWrapContext.prototype.generateDefaultContext = function() {
 	return this.currentContext;
-}
+};
 
 WCLWrapContext.prototype.generateContext = function(platformId, deviceIds) {
 	platformId = platformId || 0;
 	deviceIds = deviceIds || [0];
 
-	if ( this.currentContext != null ) {
+	if ( this.currentContext !== null ) {
 		throw new Error("A conext is already in use. Release it before genereating a new one.");
 	}
 
@@ -57,7 +56,7 @@ WCLWrapContext.prototype.generateContext = function(platformId, deviceIds) {
 
 	deviceIds.forEach(function(el) {
 		if ((el < 0) || (el >= wclwrapObj.getDevices().length)) {
-			var currPlatform = wclwrapObj.getCurrentPlatform().getInfo(WebCL.PLATFORM_NAME);		
+			var currPlatform = wclwrapObj.getCurrentPlatform().getInfo(WebCL.PLATFORM_NAME);
 			wclwrapObj.currentPlatform = null;
 			throw new Error("Unknown device id for platform: " + currPlatform);
 		} else {
@@ -66,7 +65,7 @@ WCLWrapContext.prototype.generateContext = function(platformId, deviceIds) {
 	});
 
 	if (usableDevices.length <= 0) {
-		var currPlatform = this.getCurrentPlatform().getInfo(WebCL.PLATFORM_NAME);		
+		var currPlatform = this.getCurrentPlatform().getInfo(WebCL.PLATFORM_NAME);
 		this.currentPlatform = null;
 		throw new Error("Unknown device id for platform: " + currPlatform);
 	}
@@ -75,9 +74,9 @@ WCLWrapContext.prototype.generateContext = function(platformId, deviceIds) {
 
 	try {
 		this.currentContext = WebCL.createContext({
-    		deviceType: this.getCurrentDevices(),
-    		platform: this.getCurrentPlatform()
-  		});
+			deviceType: this.getCurrentDevices(),
+			platform: this.getCurrentPlatform()
+		});
 	} catch (err) {
 		var currPlatform = this.getCurrentPlatform().getInfo(WebCL.PLATFORM_NAME);
 
@@ -87,11 +86,11 @@ WCLWrapContext.prototype.generateContext = function(platformId, deviceIds) {
 
 		throw new Error("Error while creating context for " + currentPlatform + ".\n"+err);
 	}
-}
+};
 
 WCLWrapContext.prototype.releaseContext = function() {
 	this.currentContext = null;
-}
+};
 
 function WCLWrapKernel(kernelName, contextWrapper) {
 	if (!((typeof(kernelName) == "string") && (kernelName.length > 0))) {
@@ -102,8 +101,8 @@ function WCLWrapKernel(kernelName, contextWrapper) {
 		throw new Error("Need a WCLWrapContext");
 	}
 
-	if (contextWrapper.getCurrentContext() == null) {
-		throw new Error("Need a WCLWrapContext with a live context enabled");	
+	if (contextWrapper.getCurrentContext() === null) {
+		throw new Error("Need a WCLWrapContext with a live context enabled");
 	}
 
 	this.kernelName = kernelName;
@@ -112,21 +111,21 @@ function WCLWrapKernel(kernelName, contextWrapper) {
 
 WCLWrapKernel.prototype.loadKernelFromFile = function(filePath) {
 	this.kernelString = fs.readFileSync(filePath, 'ascii');
-}
+};
 
 WCLWrapKernel.prototype.loadKernelFromString = function(kernelString) {
 	this.kernelString = kernelString;
-}
+};
 
 WCLWrapKernel.prototype.replaceKernelSourceVar = function(sourceVar, sourceContent) {
 	this.kernelString = this.kernelString.replace(sourceVar, sourceContent);
-}
+};
 
 WCLWrapKernel.prototype.createClKernel = function(argObjList) {
 	var kernelOut = null, program = null;
 	argObjList = argObjList || [];
 
-	if (this.kernelString == null) {
+	if (this.kernelString === null) {
 		throw new Error("Cannot build a kernel on an empty source");
 	}
 
@@ -142,7 +141,7 @@ WCLWrapKernel.prototype.createClKernel = function(argObjList) {
 		kernelOut = program.createKernel(this.kernelName);
 	} catch(err) {
 		kernelOut = null;
-		throw new Error("Problem while building and creating kernel.\n" + program.getBuildInfo(currDevice,WebCL.PROGRAM_BUILD_LOG));
+		throw new Error("Problem while building and creating kernel.\n" /*+ program.getBuildInfo(currDevice,WebCL.PROGRAM_BUILD_LOG)*/);
 	}
 
 	if (argObjList.length > 0) {
@@ -150,6 +149,6 @@ WCLWrapKernel.prototype.createClKernel = function(argObjList) {
 			kernelOut.setArg(idx, el);
 		});
 	}
-	
+
 	return kernelOut;
-}
+};
