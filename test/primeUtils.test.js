@@ -1,8 +1,8 @@
-require("../array.prototype.js")
-primeUtils = require("../primeUtils.js");
+require("../array.prototype.js");
+var primeUtils = require("../primeUtils.js");
 
-should = require('should');
-log = console.log;
+var should = require('should');
+var log = console.log;
 
 describe('primeUtils', function(){
 
@@ -44,28 +44,29 @@ describe('primeUtils', function(){
 	describe('#isPrime(arg)', function(){
 		it('should return false if argument is 0', function(){
 			primeUtils.isPrime(0).should.be.false;
-		}); 
+		});
 
 		it('should return false if argument is 1', function(){
 			primeUtils.isPrime(1).should.be.false;
-		}); 		
+		});
 
 		it('should return true for every number in the "primeNumbers" array', function(){
 			primeNumbers.every(function(e) { return primeUtils.isPrime(e); } ).should.be.true;
-		});  	
-  	})
+		});
+	});
 
 	describe('#listDivisors(arg)', function(){
 		it('should throw if argument is less than 1', function(){
 			(function() { primeUtils.listDivisors(0); }).should.throw();
-		}); 
+		});
 
 		it('should return an array of divisor if argument is greater or equal to 1', function(){
 			(primeUtils.listDivisors(1) instanceof Array).should.be.equal(true);
 		});
 
 		it('should return the correct divisos sequence for the "divisors" array', function(){
-			divisors.map(function(e) { return primeUtils.listDivisors(e[0]).equalsV8(e[1]); } ).every(function(e) { return e; } ).should.be.true;
+			divisors.map( function(e) { return primeUtils.listDivisors(e[0]).equalsV8(e[1]); } )
+					.every( function(e) { return e; } ).should.be.true;
 		});
-  	}) 
-})
+	});
+});
