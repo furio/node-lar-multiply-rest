@@ -5,10 +5,12 @@ function csr_matrix(objargs) {
 	this.rowptr = null;
 	this.col = null;
 	this.data = null;
-	// Useful for various calc
+	// Useful for various calc and shape
 	this.numrow = 0;
 	this.lastcolumn = 0;
 	this.nnz = 0;
+	// To alter shape at runtime
+	this.emptycolumns = 0;
 	// BaseIndexing
 	this.baseIndex = 0;
 
@@ -60,11 +62,41 @@ csr_matrix.prototype.getRowCount = function() {
 };
 
 csr_matrix.prototype.getColCount = function() {
-	return this.lastcolumn;
+	return (this.lastcolumn + this.emptycolumns);
 };
 
 csr_matrix.prototype.getNonZeroElementsCount = function() {
 	return this.nnz;
+};
+
+csr_matrix.prototype.pushEmptyRow = function() {
+	this.rowptr.push( this.getRowPointer()[this.getRowPointer().length - 1] );
+	this.numrow = this.getRowPointer().length - 1;
+};
+
+csr_matrix.prototype.popEmptyRow = function() {
+	if (this.getRowCount() <= 1) {
+		throw new Error('Cannot remove any more rows');
+	}
+
+	if ( this.getRowPointer()[this.getRowCount()] != this.getRowPointer()[this.getRowCount() + 1] ) {
+		throw new Error('Cannot remove any more rows');
+	}
+
+	this.rowptr.pop();
+	this.numrow = this.getRowPointer().length - 1;
+};
+
+csr_matrix.prototype.pushEmptyColumn = function() {
+	this.emptycolumns += 1;
+};
+
+csr_matrix.prototype.popEmptyColumn = function() {
+	if (this.emptycolumns <= 0) {
+		throw new Error('Cannot remove any more columns');
+	}
+
+	this.emptycolumns -= 1;
 };
 
 csr_matrix.prototype.loadData = function(objargs) {
@@ -75,6 +107,7 @@ csr_matrix.prototype.loadData = function(objargs) {
 
 	var tmp_rowptr, tmp_col, tmp_colMax, tmp_data;
 
+	// Modifica: togli numrows, inutile se prendo gli array gia' fatti in una csr, numrows è sempre rowptr.length - 1!!
 	if (objargs.hasOwnProperty("numrows") && objargs.hasOwnProperty("rowptr") && objargs.hasOwnProperty("colindices") && objargs.hasOwnProperty("data")) {
 		if (objargs.colindices.length != objargs.data.length) {
 			throw new Error('Expected objargs.colindices.length == objargs.data.length');
@@ -117,6 +150,7 @@ csr_matrix.prototype.loadData = function(objargs) {
 	} else if (objargs.hasOwnProperty("size")) {
 		// 0 everywhere
 
+		/*
 		this.rowptr = [];
 		this.col = [];
 		this.data = [];
@@ -124,6 +158,7 @@ csr_matrix.prototype.loadData = function(objargs) {
 		this.numrow = objargs.size.row;
 		this.lastcolumn = objargs.size.col;
 		this.nnz = 0;
+		*/
 
 	} else if (objargs.hasOwnProperty("fromtriples")) {
 		// leggi da file le triple e genera
@@ -135,6 +170,10 @@ csr_matrix.prototype.loadData = function(objargs) {
 		var colIdx = 0;
 		var rowCount = 0;
 		var prevRow = this.baseIndex-1;
+
+		// modify 
+		// 1) for objargs.numcols
+		// 2) for objargs.numrows
 
 		for (var i = 0; i < objargs.fromdense.length; i++, colIdx++) {
 			if (prevRow != rowCount) {
@@ -157,7 +196,7 @@ csr_matrix.prototype.loadData = function(objargs) {
 		// Add last nnz
 		tmp_rowptr.push( tmp_data.length );
 
-		this.loadData({"numrows": rowCount, "numcols": objargs.numcols, "rowptr": tmp_rowptr, "colindices": tmp_col, "data": tmp_data});
+		this.loadData({"numrows": (tmp_rowptr.length-1), "numcols": objargs.numcols, "rowptr": tmp_rowptr, "colindices": tmp_col, "data": tmp_data});
 	}
 };
 
@@ -175,12 +214,12 @@ csr_matrix.prototype.transpose = function() {
 	};
 
 	// lookup
-	var m = this.numrow;
-	var n = this.lastcolumn;
+	var m = this.getRowCount();
+	var n = this.getColCount();
 	var base = this.baseIndex;
 
 	// NNZ elements
-	var nnz = this.rowptr[m] - base;
+	var nnz = this.getRowPointer()[m] - base;
 
 	// New arrays
 	var newPtr = new Array(n + 1);
@@ -194,7 +233,7 @@ csr_matrix.prototype.transpose = function() {
 
 	// Count nnz per column
 	for(i = 0; i < nnz; i++) {
-		count_nnz[(this.col[i] - base)]++;
+		count_nnz[(this.getColumnIndices()[i] - base)]++;
 	}
 
 	// Create the new rowPtr
@@ -208,12 +247,12 @@ csr_matrix.prototype.transpose = function() {
 	// Copia i valori in posizione
 	for(i = 0; i < m; i++) {
 		var k;
-		for (k = (this.rowptr[i] - base); k < (this.rowptr[i+1] - base); k++ ) {
-			var j = this.col[k] - base;
+		for (k = (this.getRowPointer()[i] - base); k < (this.getRowPointer()[i+1] - base); k++ ) {
+			var j = this.getColumnIndices()[k] - base;
 			var l = count_nnz[j];
 
 			newCol[l] = i;
-			newData[l] = this.data[k];
+			newData[l] = this.getData()[k];
 			count_nnz[j]++;
 		}
 	}
@@ -390,10 +429,10 @@ csr_matrix.prototype.equals = function(other) {
 };
 
 csr_matrix.prototype.toString = function() {
-	var outString = "Sparse Matrix ("+this.numrow+" x "+this.lastcolumn+") Nnz: "+this.nnz+"\n";
-	outString += "RowPtr " + this.rowptr + "\n";
-	outString += "Column Indices " + this.col + "\n";
-	outString += "Data " + this.data + "\n";
+	var outString = "Sparse Matrix ("+this.getRowCount()+" x "+this.getColCount()+") Nnz: "+this.getNonZeroElementsCount()+"\n";
+	outString += "RowPtr " + this.getRowPointer() + "\n";
+	outString += "Column Indices " + this.getColumnIndices() + "\n";
+	outString += "Data " + this.getData() + "\n";
 
 	return outString;
 };
