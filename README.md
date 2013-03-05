@@ -14,7 +14,7 @@ A simple REST module that performs sparse matrix multiplication through WebCL/We
 
 * Clone this repository
 * Enter the repository directory
-* npm install or CPLUS_INCLUDE_PATH=<your_opencl_include_dir> npm install
+* npm install or CPLUS_INCLUDE_PATH=$your_opencl_include_dir npm install
 
 ## License
 
