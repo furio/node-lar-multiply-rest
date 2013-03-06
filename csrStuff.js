@@ -107,8 +107,7 @@ csr_matrix.prototype.loadData = function(objargs) {
 
 	var tmp_rowptr, tmp_col, tmp_colMax, tmp_data;
 
-	// Modifica: togli numrows, inutile se prendo gli array gia' fatti in una csr, numrows è sempre rowptr.length - 1!!
-	if (objargs.hasOwnProperty("numrows") && objargs.hasOwnProperty("rowptr") && objargs.hasOwnProperty("colindices") && objargs.hasOwnProperty("data")) {
+	if (objargs.hasOwnProperty("rowptr") && objargs.hasOwnProperty("colindices") && objargs.hasOwnProperty("data")) {
 		if (objargs.colindices.length != objargs.data.length) {
 			throw new Error('Expected objargs.colindices.length == objargs.data.length');
 		}
@@ -125,11 +124,11 @@ csr_matrix.prototype.loadData = function(objargs) {
 		this.rowptr = tmp_rowptr;
 		this.col = tmp_col;
 		this.data = tmp_data;
-		this.numrow = objargs.numrows;
+		this.numrow = tmp_rowptr.length - 1;
 		this.lastcolumn = Math.max(tmp_colMax, objargs.numcols);
 		this.nnz = this.data.length;
 
-	} else if (objargs.hasOwnProperty("numrows") && objargs.hasOwnProperty("rowptr") && objargs.hasOwnProperty("colindices")) {
+	} else if (objargs.hasOwnProperty("rowptr") && objargs.hasOwnProperty("colindices")) {
 
 		tmp_rowptr = new Array(objargs.rowptr.length);
 		tmp_col = new Array(objargs.colindices.length);
@@ -143,23 +142,13 @@ csr_matrix.prototype.loadData = function(objargs) {
 		this.rowptr = tmp_rowptr;
 		this.col = tmp_col;
 		this.data = tmp_data;
-		this.numrow = objargs.numrows;
+		this.numrow = tmp_rowptr.length - 1;
 		this.lastcolumn = Math.max(tmp_colMax, objargs.numcols);
 		this.nnz = this.data.length;
 
 	} else if (objargs.hasOwnProperty("size")) {
 		// 0 everywhere
-
-		/*
-		this.rowptr = [];
-		this.col = [];
-		this.data = [];
-
-		this.numrow = objargs.size.row;
-		this.lastcolumn = objargs.size.col;
-		this.nnz = 0;
-		*/
-
+		this.loadData({"numcols": objargs.size.col, "fromdense": this.__newFilledArray(objargs.size.row * objargs.size.col, 0)});
 	} else if (objargs.hasOwnProperty("fromtriples")) {
 		// leggi da file le triple e genera
 	} else if (objargs.hasOwnProperty("fromdense") && (objargs.numcols > 0)) {
@@ -169,7 +158,7 @@ csr_matrix.prototype.loadData = function(objargs) {
 		var nnz = 0;
 		var colIdx = 0;
 		var rowCount = 0;
-		var prevRow = this.baseIndex-1;
+		var prevRow = this.baseIndex - 1;
 
 		// modify 
 		// 1) for objargs.numcols
@@ -196,7 +185,7 @@ csr_matrix.prototype.loadData = function(objargs) {
 		// Add last nnz
 		tmp_rowptr.push( tmp_data.length );
 
-		this.loadData({"numrows": (tmp_rowptr.length-1), "numcols": objargs.numcols, "rowptr": tmp_rowptr, "colindices": tmp_col, "data": tmp_data});
+		this.loadData({"numcols": objargs.numcols, "rowptr": tmp_rowptr, "colindices": tmp_col, "data": tmp_data});
 	}
 };
 
@@ -282,6 +271,10 @@ csr_matrix.prototype.multiply = function(matrix) {
 };
 
 csr_matrix.prototype.__denseMultiply = function(matrix) {
+	if (this.getColCount() != matrix.getRowCount()) {
+		throw new Error("Current matrix columns are different from argument matrix rows");
+	}
+
 	var argMatrix = matrix.transpose();
     var denseResult = new Array(this.getRowCount() * matrix.getColCount());
 
@@ -426,6 +419,13 @@ csr_matrix.prototype.equals = function(other) {
 			this.getRowPointer().equalsV8(other.getRowPointer()) &&
 			this.getColumnIndices().equalsV8(other.getColumnIndices()) &&
 			this.getData().equalsV8(other.getData());
+};
+
+csr_matrix.prototype.copy = function() {
+	var outMatrix = new csr_matrix({"rowptr": this.getRowPointer(), "colindices": this.getColumnIndices(), "data": this.getData()});
+	outMatrix.emptycolumns = this.emptycolumns;
+
+	return outMatrix;
 };
 
 csr_matrix.prototype.toString = function() {
