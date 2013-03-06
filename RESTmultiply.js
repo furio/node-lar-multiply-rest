@@ -1,5 +1,5 @@
-var USE_CLUSTER = true;
-var USE_WEBCL = false;
+var USE_CLUSTER = false;
+var USE_WEBCL = true;
 
 // Library from NPM
 var i_express = require('express'),
