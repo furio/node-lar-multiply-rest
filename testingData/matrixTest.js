@@ -24,7 +24,18 @@ var matR = new csr_matrix({
 log(mat1.toString());
 log(mat2.toString());
 log(matR.toString());
-log(mat1.multiply(mat2).toString());
+
+var matJS = mat1.multiply(mat2);
+log(matJS.toString());
+
+var matCL = require("../SpMSpM-Multiply.js").multiplyMatrix(mat1, mat2, false);
+log(matCL.toString());
+
+
+log("MatR e MatJS: " + matR.equals(matJS));
+log("MatR e MatCL: " + matR.equals(matCL));
+log("MatCL e MatJS: " + matCL.equals(matJS));
+
 
 
 /*
