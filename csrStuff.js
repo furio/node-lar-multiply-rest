@@ -133,15 +133,13 @@ csr_matrix.prototype.loadData = function(objargs) {
 		tmp_rowptr = new Array(objargs.rowptr.length);
 		tmp_col = new Array(objargs.colindices.length);
 		tmp_colMax = 0;
-		tmp_data = new Array(objargs.colindices.length);
 
 		objargs.rowptr.forEach(function(i,idx) { tmp_rowptr[idx] = i; } );
 		objargs.colindices.forEach(function(i,idx) { tmp_col[idx] = i; tmp_colMax = Math.max(tmp_colMax,i+1); } );
-		objargs.data.forEach(function(i,idx) { tmp_data[idx] = 1; } );
 
 		this.rowptr = tmp_rowptr;
 		this.col = tmp_col;
-		this.data = tmp_data;
+		this.data = this.__newFilledArray(tmp_col.length, 1);
 		this.numrow = tmp_rowptr.length - 1;
 		this.lastcolumn = Math.max(tmp_colMax, objargs.numcols);
 		this.nnz = this.data.length;

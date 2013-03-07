@@ -42,7 +42,7 @@ describe('SpMSpM-Multiply', function(){
 	describe('multiplyMatrix(randomMatrix,randomMatrix)', function(){
 		it('should return a csr matrix with correct content', function(){
 			// Keep it low JS verification algorithm is slower
-			var m = 4, p = 5, n = 6;
+			var m = 262, p = 176, n = 262;
 			var randomDense1 = f_generateBinaryMatrix(m,p);
 			var randomDense2 = f_generateBinaryMatrix(p,n);
 
