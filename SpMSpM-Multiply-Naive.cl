@@ -12,7 +12,7 @@ __kernel void spmm_kernel_naive(
 	int currRow = get_global_id(0);
 	int currCol = get_global_id(1);
 
-	if( !(currRow < MAXROW) && (currCol < MAXCOL) )
+	if( !((currRow < MAXROW) && (currCol < MAXCOL)) )
 	{
 		return;
 	}
@@ -55,7 +55,7 @@ __kernel void spmm_binary_kernel_naive(
 	int currRow = get_global_id(0);
 	int currCol = get_global_id(1);
 
-	if( !(currRow < MAXROW) && (currCol < MAXCOL) )
+	if( !((currRow < MAXROW) && (currCol < MAXCOL)) )
 	{
 		return;
 	}
