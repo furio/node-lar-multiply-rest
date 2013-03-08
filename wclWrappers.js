@@ -62,6 +62,7 @@ WCLWrapContext.prototype.generateBestGraphicContext = function(multipleDevices) 
 		  			possibleContext.push( {
 		  				"pid": i,
 		  				"did": j,
+		  				"name": currD.getInfo(WebCL.DEVICE_NAME),
 		  				// "opencl": currD.getInfo(WebCL.DEVICE_OPENCL_C_VERSION),
 		  				"units": currD.getInfo(WebCL.DEVICE_MAX_COMPUTE_UNITS),
 		  				"gmem": currD.getInfo(WebCL.DEVICE_GLOBAL_MEM_SIZE),
