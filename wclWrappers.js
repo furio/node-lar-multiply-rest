@@ -2,10 +2,6 @@ var WebCL = require('node-webcl'),
 	fs = require('fs'),
 	log = console.log;
 
-if (WebCL === undefined) {
-	throw new Error("Unfortunately your system does not support WebCL. Make sure that you have the WebCL extension installed.");
-}
-
 function WCLWrapContext() {
 	this.currentPlatform = null;
 	this.currentDevices = null;
@@ -218,3 +214,6 @@ WCLWrapKernel.prototype.createClKernel = function(argObjList) {
 
 	return kernelOut;
 };
+
+exports.WCLWrapContext = WCLWrapContext;
+exports.WCLWrapKernel = WCLWrapKernel;
