@@ -48,20 +48,23 @@ WCLWrapContext.prototype.generateBestGraphicContext = function(multipleDevices) 
 	var platforms = WebCL.getPlatforms();
 	for (var i = 0; i < platforms.length; i++) {
   		var currP = platforms[i];
-  		var devices = currP.getDevices(WebCL.DEVICE_TYPE_GPU);
+  		var devices = currP.getDevices(WebCL.DEVICE_TYPE_ALL);
   		
   		if (devices.length != 0) {
 	  		for (var j = 0; j < devices.length; j++ ) {
 	  			var currD = devices[j];
+	  			var currDtype = parseInt( currD.getInfo(WebCL.DEVICE_TYPE) );
 
-	  			possibleContext.push( {
-	  				"pid": i,
-	  				"did": j,
-	  				// "opencl": currD.getInfo(WebCL.DEVICE_OPENCL_C_VERSION),
-	  				"units": currD.getInfo(WebCL.DEVICE_MAX_COMPUTE_UNITS),
-	  				"mem": currD.getInfo(WebCL.DEVICE_MAX_COMPUTE_UNITS),
-	  				"group": currD.getInfo(WebCL.DEVICE_MAX_COMPUTE_UNITS)
-	  			} );
+	  			if ( currDtype & WebCL.DEVICE_TYPE_GPU ) {
+		  			possibleContext.push( {
+		  				"pid": i,
+		  				"did": j,
+		  				// "opencl": currD.getInfo(WebCL.DEVICE_OPENCL_C_VERSION),
+		  				"units": currD.getInfo(WebCL.DEVICE_MAX_COMPUTE_UNITS),
+		  				"mem": currD.getInfo(WebCL.DEVICE_MAX_COMPUTE_UNITS),
+		  				"group": currD.getInfo(WebCL.DEVICE_MAX_COMPUTE_UNITS)
+		  			} );  				
+	  			}
 	  		}  			
   		}
   	}
