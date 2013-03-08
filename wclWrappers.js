@@ -55,14 +55,17 @@ WCLWrapContext.prototype.generateBestGraphicContext = function(multipleDevices) 
 	  			var currD = devices[j];
 	  			var currDtype = parseInt( currD.getInfo(WebCL.DEVICE_TYPE) );
 
-	  			if ( currDtype & WebCL.DEVICE_TYPE_GPU ) {
+	  			// We need a GPU with at least 2 dimensions workgroups
+	  			if ( ( currDtype & WebCL.DEVICE_TYPE_GPU ) &&
+	  				 ( currD.getInfo(WebCL.DEVICE_MAX_WORK_ITEM_DIMENSIONS) >= 2 ) ) {
+
 		  			possibleContext.push( {
 		  				"pid": i,
 		  				"did": j,
 		  				// "opencl": currD.getInfo(WebCL.DEVICE_OPENCL_C_VERSION),
 		  				"units": currD.getInfo(WebCL.DEVICE_MAX_COMPUTE_UNITS),
-		  				"mem": currD.getInfo(WebCL.DEVICE_MAX_COMPUTE_UNITS),
-		  				"group": currD.getInfo(WebCL.DEVICE_MAX_COMPUTE_UNITS)
+		  				"gmem": currD.getInfo(WebCL.DEVICE_GLOBAL_MEM_SIZE),
+		  				"group": currD.getInfo(WebCL.DEVICE_MAX_WORK_GROUP_SIZE)
 		  			} );  				
 	  			}
 	  		}  			
