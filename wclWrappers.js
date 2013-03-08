@@ -24,6 +24,10 @@ WCLWrapContext.prototype.getDevices = function() {
 	return this.currentPlatform.getDevices(WebCL.DEVICE_TYPE_ALL);
 };
 
+WCLWrapContext.prototype.getGraphicDevices = function() {
+	return this.currentPlatform.getDevices(WebCL.DEVICE_TYPE_GPU);
+};
+
 WCLWrapContext.prototype.getCurrentDevices = function() {
 	return this.currentDevices;
 };
@@ -32,8 +36,67 @@ WCLWrapContext.prototype.getCurrentContext = function() {
 	return this.currentContext;
 };
 
-WCLWrapContext.prototype.generateDefaultContext = function() {
-	return this.currentContext;
+WCLWrapContext.prototype.generateBestGraphicContext = function(multipleDevices) {
+	multipleDevices = multipleDevices || false;
+
+	if ( this.currentContext !== null ) {
+		throw new Error("A context is already in use. Release it before genereating a new one.");
+	}
+
+	if ( multipleDevices === true ) {
+		throw new Error("Multiple devices selection is not supported.");
+	}
+
+	var possibleContext = [];
+
+	var platforms = WebCL.getPlatforms();
+	for (var i = 0; i < platforms.length; i++) {
+  		var currP = platforms[i];
+  		var devices = currP.getDevices(WebCL.DEVICE_TYPE_GPU);
+  		
+  		if (devices.length != 0) {
+	  		for (var j = 0; j < devices.length; j++ ) {
+	  			var currD = devices[j];
+
+	  			possibleContext.push( {
+	  				"pid": i,
+	  				"did": j,
+	  				// "opencl": currD.getInfo(WebCL.DEVICE_OPENCL_C_VERSION),
+	  				"units": currD.getInfo(WebCL.DEVICE_MAX_COMPUTE_UNITS),
+	  				"mem": currD.getInfo(WebCL.DEVICE_MAX_COMPUTE_UNITS),
+	  				"group": currD.getInfo(WebCL.DEVICE_MAX_COMPUTE_UNITS)
+	  			} );
+	  		}  			
+  		}
+  	}
+
+  	if (possibleContext.length <= 0) {
+  		throw new Error("Not enough devices.");
+  	}
+
+  	possibleContext.sort( this.__dynamicSortMultiple("units","mem","group") );
+  	log(possibleContext);
+  	// this.generateContext(possibleContext[0].pid, [possibleContext[0].did])
+};
+
+WCLWrapContext.prototype.__dynamicSortMultiple = function() {
+    /*
+     * save the arguments object as it will be overwritten
+     * note that arguments object is an array-like object
+     * consisting of the names of the properties to sort by
+     */
+    var props = arguments;
+    return function (obj1, obj2) {
+        var i = 0, result = 0, numberOfProperties = props.length;
+        /* try getting a different result from 0 (equal)
+         * as long as we have extra properties to compare
+         */
+        while(result === 0 && i < numberOfProperties) {
+            result = dynamicSort(props[i])(obj1, obj2);
+            i++;
+        }
+        return result;
+    }
 };
 
 WCLWrapContext.prototype.generateContext = function(platformId, deviceIds) {
@@ -41,7 +104,7 @@ WCLWrapContext.prototype.generateContext = function(platformId, deviceIds) {
 	deviceIds = deviceIds || [0];
 
 	if ( this.currentContext !== null ) {
-		throw new Error("A conext is already in use. Release it before genereating a new one.");
+		throw new Error("A context is already in use. Release it before genereating a new one.");
 	}
 
 
@@ -89,7 +152,10 @@ WCLWrapContext.prototype.generateContext = function(platformId, deviceIds) {
 };
 
 WCLWrapContext.prototype.releaseContext = function() {
-	this.currentContext = null;
+	if ( this.currentContext !== null ) {
+		this.currentContext.release();
+		this.currentContext = null;		
+	}
 };
 
 function WCLWrapKernel(kernelName, contextWrapper) {
