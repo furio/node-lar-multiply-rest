@@ -78,8 +78,7 @@ WCLWrapContext.prototype.generateBestGraphicContext = function(multipleDevices) 
   	}
 
   	possibleContext.sort( this.__dynamicSortMultiple("units","mem","group") );
-  	log(possibleContext);
-  	// this.generateContext(possibleContext[0].pid, [possibleContext[0].did])
+  	this.generateContext(possibleContext[0].pid, [possibleContext[0].did]);
 };
 
 WCLWrapContext.prototype.__dynamicSortMultiple = function() {
