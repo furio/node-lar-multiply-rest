@@ -16,6 +16,9 @@ A simple REST module that performs sparse matrix multiplication through WebCL/We
 * Enter the repository directory
 * npm install or CPLUS_INCLUDE_PATH=$your_opencl_include_dir npm install
 
+Note that if you incur in some problems, they might be related to the module requires "node-webcl":
+you need to install also its own dependencies that don't get installed automatically (read: https://github.com/furio/node-webcl/blob/master/README.md#dependencies)
+
 ## License
 
 (The MIT License)
