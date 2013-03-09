@@ -158,6 +158,12 @@ describe('csr_matrix', function(){
 		});
 	});
 
+	describe('#copy()', function(){
+		it('should return a copy of the matrix', function() {
+			csr_dense.equals( csr_dense.copy() ).should.be.true;
+		});
+	});	
+
 	describe('#transpose()', function(){
 		it('should return a new properly transposed csr_matrix', function() {
 			var transposedDense = csr_dense.transpose();
@@ -173,6 +179,10 @@ describe('csr_matrix', function(){
 	});
 
 	describe('#multiply(csr_matrix)', function(){
+		it('should throw if input sizes are not correct for the current multiplication', function() {
+			(function() { csr_dense.multiply(csr_dense); }).should.throw;
+		});
+
 		it('should return a new csr_matrix that is the result of multiplication of current with argument', function() {
 			var mulResult = csr_dense.multiply(csr_denseTwo);
 
