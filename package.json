@@ -1,6 +1,6 @@
 {
   "name":"node-lar-multiply-rest",
-  "version":"0.0.2",
+  "version":"0.0.3",
   "author": "Francesco Furiani",
   "private": true,
   "repository": {
@@ -19,6 +19,8 @@
     "mocha": ">= 1.8.0",
     "should": ">= 1.2.0"
   },
-  "main": "./startREST.sh",
-  "optionalDependencies": {}
+  "scripts": {
+    "test": "make test", 
+    "run": "./startREST.sh"
+  }
 }
