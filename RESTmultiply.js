@@ -147,13 +147,25 @@ var childServer = function(isCluster) {
 	var f_multiply_matrices = function(matrixA, matrixB) {
 			// Import the matrices
 		log("Importing first matrix");
-		var csrA = new csr_matrix({"numrows": matrixA.ROWCOUNT, "numcols": matrixA.COLCOUNT,
+		var csrA, csrB;
+
+		if (matrixA.hasOwnProperty("DATA")) {
+			csrA = new csr_matrix({"numrows": matrixA.ROWCOUNT, "numcols": matrixA.COLCOUNT,
 									"rowptr": matrixA.ROW, "colindices": matrixA.COL, "data": matrixA.DATA});
+		} else {
+			csrA = new csr_matrix({"numrows": matrixA.ROWCOUNT, "numcols": matrixA.COLCOUNT,
+									"rowptr": matrixA.ROW, "colindices": matrixA.COL});		
+		}
 		log("Imported first matrix: " + csrA.getRowCount() + "x" + csrA.getColCount() );
 
 		log("Importing second matrix");
-		var csrB = new csr_matrix({"numrows": matrixB.ROWCOUNT, "numcols": matrixB.COLCOUNT,
+		if (matrixB.hasOwnProperty("DATA")) {
+			csrB = new csr_matrix({"numrows": matrixB.ROWCOUNT, "numcols": matrixB.COLCOUNT,
 									"rowptr": matrixB.ROW, "colindices": matrixB.COL, "data": matrixB.DATA});
+		} else {
+			csrB = new csr_matrix({"numrows": matrixB.ROWCOUNT, "numcols": matrixB.COLCOUNT,
+									"rowptr": matrixB.ROW, "colindices": matrixB.COL});		
+		}
 		log("Imported second matrix: " + csrB.getRowCount() + "x" + csrB.getColCount() );
 
 		log("Calculating multiplication");

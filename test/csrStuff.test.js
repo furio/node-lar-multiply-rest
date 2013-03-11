@@ -118,6 +118,23 @@ describe('csr_matrix', function(){
 			csr_dense.getData().every(function(item,idx) { return (item === float32array[idx]); }).should.be.true;
 		});
 	});
+	
+	describe('#getData(true, true)', function(){
+		it('should return a Uint32Array', function() {
+			var ui32array = csr_dense.getData(true, true);
+			(ui32array instanceof Uint32Array).should.be.true;
+		});
+
+		it('should return a Uint32Array with the same length of getData(false)', function() {
+			var ui32array = csr_dense.getData(true, true);
+			ui32array.should.have.length(csr_dense.getData().length);
+		});
+
+		it('should return a Uint32Array with the same content of getData(false)', function() {
+			var ui32array = csr_dense.getData(true, true);
+			csr_dense.getData().every(function(item,idx) { return (item === ui32array[idx]); }).should.be.true;
+		});
+	});	
 
 	describe('#toDense()', function(){
 		it('should return an Array of Array that represents a dense matrix', function() {

@@ -33,6 +33,11 @@ WCLWrapContext.prototype.getCurrentContext = function() {
 };
 
 WCLWrapContext.prototype.generateBestGraphicContext = function(multipleDevices) {
+	var idxChoose = this.__generateBestGraphicContextIdx(multipleDevices);
+	this.generateContext(idxChoose.pid, [idxChoose.did]);
+};
+
+WCLWrapContext.prototype.__generateBestGraphicContextIdx = function(multipleDevices) {
 	multipleDevices = multipleDevices || false;
 
 	if ( this.currentContext !== null ) {
@@ -62,7 +67,8 @@ WCLWrapContext.prototype.generateBestGraphicContext = function(multipleDevices) 
 		  			possibleContext.push( {
 		  				"pid": i,
 		  				"did": j,
-		  				"name": currD.getInfo(WebCL.DEVICE_NAME),
+						"pname": currP..getInfo(WebCL.PLATFORM_NAME),
+		  				"dname": currD.getInfo(WebCL.DEVICE_NAME),
 		  				// "opencl": currD.getInfo(WebCL.DEVICE_OPENCL_C_VERSION),
 		  				"units": currD.getInfo(WebCL.DEVICE_MAX_COMPUTE_UNITS),
 		  				"gmem": currD.getInfo(WebCL.DEVICE_GLOBAL_MEM_SIZE),
@@ -78,7 +84,7 @@ WCLWrapContext.prototype.generateBestGraphicContext = function(multipleDevices) 
   	}
 
   	possibleContext.sort( this.__dynamicSortMultiple("units","mem","group") );
-  	this.generateContext(possibleContext[0].pid, [possibleContext[0].did]);
+  	return possibleContext[0];
 };
 
 WCLWrapContext.prototype.__dynamicSortMultiple = function() {
@@ -145,7 +151,7 @@ WCLWrapContext.prototype.generateContext = function(platformId, deviceIds) {
 
 	try {
 		this.currentContext = WebCL.createContext({
-			deviceType: this.getCurrentDevices(),
+			devices: this.getCurrentDevices(),
 			platform: this.getCurrentPlatform()
 		});
 	} catch (err) {

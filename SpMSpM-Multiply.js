@@ -2,13 +2,8 @@ var csr_matrix = require("./csrStuff").csr_matrix,
 	WebCL = require('node-webcl'),
 	fs = require('fs'),
 	primeUtils = require("./primeUtils.js"),
-	log = console.log;
-
-// Platform const for my workspace
-var NVIDIA = 0;
-var INTEL = 1;
-//
-var PLATFORM_IN_USE = NVIDIA;
+	log = console.log,
+	wclWrap = require("./wclWrappers.js");
 
 // =======================================
 
@@ -86,15 +81,13 @@ var f_multiplyMatrix = function(matA, matBx) {
 	// Transpose matBx for the algorithm in CL
 	var matB = matBx.transpose();
 
-	// Pick platform
-	var platformList = WebCL.getPlatforms();
-	var platform = platformList[PLATFORM_IN_USE];
-	log('using platform: '+platform.getInfo(WebCL.PLATFORM_NAME));
-
-	//Query the set of devices on this platform
-	var devices = platform.getDevices(WebCL.DEVICE_TYPE_DEFAULT);
-	var currDevice = devices[0];
-	log('using device: '+currDevice.getInfo(WebCL.DEVICE_NAME));
+	// 
+	var bestSingleDevice = new wclWrap.WCLWrapContext()__generateBestGraphicContextIdx();
+	var platform = WebCL.getPlatforms()[bestSingleDevice.pid];
+	
+	// Pick platform - device
+	log('using platform: '+ bestSingleDevice.pname);
+	log('using device: '+ bestSingleDevice.dname);
 
 	// Useful vars for later
 	// BASIC VAR
@@ -103,7 +96,7 @@ var f_multiplyMatrix = function(matA, matBx) {
 	try {
 		// create GPU context for this platform
 		context = WebCL.createContext({
-			deviceType: WebCL.DEVICE_TYPE_DEFAULT,
+			devices: platform.getDevices(WebCL.DEVICE_TYPE_ALL)[bestSingleDevice.did],
 			platform: platform
 		});
 		f_clObject_add(context, clObjects);
@@ -153,7 +146,6 @@ var f_multiplyMatrix = function(matA, matBx) {
 			matA_data = context.createBuffer(WebCL.MEM_READ_ONLY, matA.getData().length*Float32Array.BYTES_PER_ELEMENT);
 			f_clObject_add(matA_data, clObjects);
 		}
-
 
 		matB_rowptr = context.createBuffer(WebCL.MEM_READ_ONLY, matB.getRowPointer().length*Uint32Array.BYTES_PER_ELEMENT);
 		f_clObject_add(matB_rowptr, clObjects);
