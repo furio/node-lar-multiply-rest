@@ -67,7 +67,7 @@ WCLWrapContext.prototype.__generateBestGraphicContextIdx = function(multipleDevi
 		  			possibleContext.push( {
 		  				"pid": i,
 		  				"did": j,
-						"pname": currP..getInfo(WebCL.PLATFORM_NAME),
+						"pname": currP.getInfo(WebCL.PLATFORM_NAME),
 		  				"dname": currD.getInfo(WebCL.DEVICE_NAME),
 		  				// "opencl": currD.getInfo(WebCL.DEVICE_OPENCL_C_VERSION),
 		  				"units": currD.getInfo(WebCL.DEVICE_MAX_COMPUTE_UNITS),

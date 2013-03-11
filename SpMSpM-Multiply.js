@@ -82,7 +82,7 @@ var f_multiplyMatrix = function(matA, matBx) {
 	var matB = matBx.transpose();
 
 	// 
-	var bestSingleDevice = new wclWrap.WCLWrapContext()__generateBestGraphicContextIdx();
+	var bestSingleDevice = new wclWrap.WCLWrapContext().__generateBestGraphicContextIdx();
 	var platform = WebCL.getPlatforms()[bestSingleDevice.pid];
 	
 	// Pick platform - device
