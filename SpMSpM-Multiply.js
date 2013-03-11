@@ -123,7 +123,7 @@ var f_multiplyMatrix = function(matA, matBx) {
 
 	try {
 		// Build program
-		program.build(devices);
+		program.build(currDevice);
 		f_clObject_add(program, clObjects);
 	} catch(err) {
 		log("Program error: " + program.getBuildInfo(currDevice,WebCL.PROGRAM_BUILD_LOG));
