@@ -84,6 +84,7 @@ var f_multiplyMatrix = function(matA, matBx) {
 	// 
 	var bestSingleDevice = new wclWrap.WCLWrapContext().__generateBestGraphicContextIdx();
 	var platform = WebCL.getPlatforms()[bestSingleDevice.pid];
+	var currDevice = platform.getDevices(WebCL.DEVICE_TYPE_ALL)[bestSingleDevice.did];
 	
 	// Pick platform - device
 	log('using platform: '+ bestSingleDevice.pname);
@@ -96,7 +97,7 @@ var f_multiplyMatrix = function(matA, matBx) {
 	try {
 		// create GPU context for this platform
 		context = WebCL.createContext({
-			devices: platform.getDevices(WebCL.DEVICE_TYPE_ALL)[bestSingleDevice.did],
+			devices: currDevice,
 			platform: platform
 		});
 		f_clObject_add(context, clObjects);
