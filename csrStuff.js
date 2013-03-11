@@ -1,5 +1,23 @@
 require("./array.prototype.js");
 
+// *
+var isInteger = function(value) {
+	return (!isNaN(value) && (Math.floor(value) === value));
+};
+
+var isUInteger = function(value) {
+	return (!isNaN(value) && (Math.floor(value) === value) && (value >= 0));
+};
+
+var newFilledArray = function(len, val) {
+    var a = [];
+    while(len--){
+        a.push(val);
+    }
+    return a;
+};
+// *
+
 function csr_matrix(objargs) {
 	// CSR Data
 	this.rowptr = null;
@@ -41,12 +59,25 @@ csr_matrix.prototype.getColumnIndices = function(useTypedArrays) {
 	}
 };
 
-csr_matrix.prototype.getData = function(useTypedArrays) {
+csr_matrix.prototype.getData = function(useTypedArrays, useBestIntegerType) {
 	useTypedArrays = useTypedArrays || false;
+	useBestIntegerType = useBestIntegerType || false;
 
 	if (useTypedArrays) {
-		var tmp_data = new Float32Array(this.data.length);
-		this.data.forEach(function(i,idx) { tmp_data[idx] = i; } );
+		var tmp_data, currentData;
+		currentData = this.data;
+		
+		if ( useBestIntegerType ) {
+			if ( currentData.every( isUInteger ) ) {
+				tmp_data = new Uint32Array(currentData.length);
+			} else {
+				tmp_data = new Int32Array(currentData.length);
+			}
+		} else {
+			tmp_data = new Float32Array(currentData.length);
+		}
+		
+		currentData.forEach(function(i,idx) { tmp_data[idx] = i; } );
 		return tmp_data;
 	} else {
 		return this.data;
@@ -54,7 +85,7 @@ csr_matrix.prototype.getData = function(useTypedArrays) {
 };
 
 csr_matrix.prototype.isBinary = function() {
-	return this.data.every(function(el) { return (el == 1); } );
+	return this.getData().every(function(el) { return (el == 1); } );
 };
 
 csr_matrix.prototype.getRowCount = function() {
@@ -139,14 +170,14 @@ csr_matrix.prototype.loadData = function(objargs) {
 
 		this.rowptr = tmp_rowptr;
 		this.col = tmp_col;
-		this.data = this.__newFilledArray(tmp_col.length, 1);
+		this.data = newFilledArray(tmp_col.length, 1);
 		this.numrow = tmp_rowptr.length - 1;
 		this.lastcolumn = Math.max(tmp_colMax, objargs.numcols);
 		this.nnz = this.data.length;
 
 	} else if (objargs.hasOwnProperty("size")) {
 		// 0 everywhere
-		this.loadData({"numcols": objargs.size.col, "fromdense": this.__newFilledArray(objargs.size.row * objargs.size.col, 0)});
+		this.loadData({"numcols": objargs.size.col, "fromdense": newFilledArray(objargs.size.row * objargs.size.col, 0)});
 	} else if (objargs.hasOwnProperty("fromtriples")) {
 		// leggi da file le triple e genera
 	} else if (objargs.hasOwnProperty("fromdense") && (objargs.numcols > 0)) {
@@ -213,7 +244,7 @@ csr_matrix.prototype.transpose = function() {
 	var newCol = new Array(nnz);
 	var newData = new Array(nnz);
 	// Create and initialize to 0
-	var count_nnz = this.__newFilledArray(n, 0);
+	var count_nnz = newFilledArray(n, 0);
 
 	// Reused index
 	var i = 0;
@@ -250,7 +281,7 @@ csr_matrix.prototype.transpose = function() {
 csr_matrix.prototype.toDense = function() {
 	var rowArray = new Array(this.getRowCount());
 	for(var i = 0; i < (this.getRowPointer().length - 1); i++) {
-		var columnAdd = this.__newFilledArray(this.getColCount(), 0);
+		var columnAdd = newFilledArray(this.getColCount(), 0);
 		for(var k = this.getRowPointer()[i]; k < this.getRowPointer()[i+1]; k++ ) {
 			columnAdd[ this.getColumnIndices()[k] ] = this.getData()[k];
 		}
@@ -321,8 +352,8 @@ csr_matrix.prototype.__csrMultiply = function(matrix) {
 	var newRowCount = this.getRowCount();
 	var newColCount = matrix.getColCount();
 
-	var tmpCol = this.__newFilledArray(newColCount, baseFiller);
-	var newRow = this.__newFilledArray(newRowCount+1, 0);
+	var tmpCol = newFilledArray(newColCount, baseFiller);
+	var newRow = newFilledArray(newRowCount+1, 0);
 
 	// Primo step
 	var i = 0, k = 0, j = 0, l = 0, cntLoop = 0;
@@ -355,7 +386,7 @@ csr_matrix.prototype.__csrMultiply = function(matrix) {
 	}
 
 	// secondo step
-	var newCol = this.__newFilledArray(newRow[newRowCount], 0);
+	var newCol = newFilledArray(newRow[newRowCount], 0);
 
 	for (i = 0; i < newRowCount; ++i) {
 		var countTmpCol = 0;
@@ -383,7 +414,7 @@ csr_matrix.prototype.__csrMultiply = function(matrix) {
 	}
 
 	// terzo step
-	var newData = this.__newFilledArray(newRow[newRowCount], 0);
+	var newData = newFilledArray(newRow[newRowCount], 0);
 
 	for (i = 0; i < newRowCount; ++i) {
 		for ( j = newRow[i]; j < newRow[i+1]; ++j) {
@@ -441,14 +472,6 @@ csr_matrix.prototype.toJSON = function() {
 			"DATA": this.getData(),
 			"ROWCOUNT": this.getRowCount(),
 			"COLCOUNT": this.getColCount()};
-};
-
-csr_matrix.prototype.__newFilledArray = function(len, val) {
-    var a = [];
-    while(len--){
-        a.push(val);
-    }
-    return a;
 };
 
 exports.csr_matrix = csr_matrix;
