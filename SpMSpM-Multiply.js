@@ -107,6 +107,11 @@ var f_multiplyMatrix = function(matA, matBx) {
 		throw new Error(err);
 	}
 
+	/*
+		qui controlla se matrici sono uint, int e carica il file diverso
+		poi + avanti cambia il tipo degli array in input/output
+	*/
+
 	//Create and program from source
 	var kernelSource = fs.readFileSync(__dirname + '/' + 'SpMSpM-Multiply-Naive.cl', 'ascii');
 	kernelSource = kernelSource.replace("%%AROW%%", matA.getRowCount());

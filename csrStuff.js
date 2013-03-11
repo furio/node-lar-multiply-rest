@@ -84,8 +84,16 @@ csr_matrix.prototype.getData = function(useTypedArrays, useBestIntegerType) {
 	}
 };
 
+csr_matrix.prototype.isDataInteger = function() {
+	return this.getData().every( isInteger );
+};
+
+csr_matrix.prototype.isDataUinteger = function() {
+	return this.getData().every( isUInteger );
+};
+
 csr_matrix.prototype.isBinary = function() {
-	return this.getData().every(function(el) { return (el == 1); } );
+	return this.getData().every(function(el) { return (el === 1); } );
 };
 
 csr_matrix.prototype.getRowCount = function() {
