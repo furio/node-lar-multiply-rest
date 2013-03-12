@@ -28,7 +28,7 @@ __kernel void spmm_kernel_naive(
 	int locRow = get_local_id(0);
 	int locCol = get_local_id(1);
 
-	if( !(currRow < MAXROW) && (currCol < MAXCOL) )
+	if( !((currRow < MAXROW) && (currCol < MAXCOL)) )
 	{
 		return;
 	}
