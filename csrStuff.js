@@ -9,6 +9,10 @@ var isUInteger = function(value) {
 	return (!isNaN(value) && (Math.floor(value) === value) && (value >= 0));
 };
 
+var isOnlyOnes = function(el) { 
+	return (el === 1); 
+};
+
 var newFilledArray = function(len, val) {
     var a = [];
     while(len--){
@@ -16,6 +20,8 @@ var newFilledArray = function(len, val) {
     }
     return a;
 };
+
+
 // *
 
 function csr_matrix(objargs) {
@@ -93,7 +99,7 @@ csr_matrix.prototype.isDataUinteger = function() {
 };
 
 csr_matrix.prototype.isBinary = function() {
-	return this.getData().every(function(el) { return (el === 1); } );
+	return this.getData().every( isOnlyOnes );
 };
 
 csr_matrix.prototype.getRowCount = function() {
@@ -144,6 +150,10 @@ csr_matrix.prototype.loadData = function(objargs) {
 		objargs.numcols = 0;
 	}
 
+	if ( objargs.hasOwnProperty("data") && objargs["data"].every( isOnlyOnes ) ) {
+		delete objargs["data"];
+	}
+
 	var tmp_rowptr, tmp_col, tmp_colMax, tmp_data;
 
 	if (objargs.hasOwnProperty("rowptr") && objargs.hasOwnProperty("colindices") && objargs.hasOwnProperty("data")) {
@@ -178,7 +188,8 @@ csr_matrix.prototype.loadData = function(objargs) {
 
 		this.rowptr = tmp_rowptr;
 		this.col = tmp_col;
-		this.data = newFilledArray(tmp_col.length, 1);
+		// this.data = newFilledArray(tmp_col.length, 1);
+		this.data = [];
 		this.numrow = tmp_rowptr.length - 1;
 		this.lastcolumn = Math.max(tmp_colMax, objargs.numcols);
 		this.nnz = this.data.length;
@@ -222,6 +233,7 @@ csr_matrix.prototype.loadData = function(objargs) {
 		// Add last nnz
 		tmp_rowptr.push( tmp_data.length );
 
+		// Recreate data
 		this.loadData({"numcols": objargs.numcols, "rowptr": tmp_rowptr, "colindices": tmp_col, "data": tmp_data});
 	}
 };
