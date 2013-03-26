@@ -150,10 +150,6 @@ csr_matrix.prototype.loadData = function(objargs) {
 		objargs.numcols = 0;
 	}
 
-	if ( objargs.hasOwnProperty("data") && objargs["data"].every( isOnlyOnes ) ) {
-		delete objargs["data"];
-	}
-
 	var tmp_rowptr, tmp_col, tmp_colMax, tmp_data;
 
 	if (objargs.hasOwnProperty("rowptr") && objargs.hasOwnProperty("colindices") && objargs.hasOwnProperty("data")) {
@@ -188,8 +184,7 @@ csr_matrix.prototype.loadData = function(objargs) {
 
 		this.rowptr = tmp_rowptr;
 		this.col = tmp_col;
-		// this.data = newFilledArray(tmp_col.length, 1);
-		this.data = [];
+		this.data = newFilledArray(tmp_col.length, 1);
 		this.numrow = tmp_rowptr.length - 1;
 		this.lastcolumn = Math.max(tmp_colMax, objargs.numcols);
 		this.nnz = this.data.length;

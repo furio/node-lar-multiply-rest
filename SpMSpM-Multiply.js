@@ -2,8 +2,7 @@ var csr_matrix = require("./csrStuff").csr_matrix,
 	WebCL = require('node-webcl'),
 	fs = require('fs'),
 	primeUtils = require("./primeUtils.js"),
-	log = console.log,
-	wclWrap = require("./wclWrappers.js");
+	log = console.log;
 
 // =======================================
 
@@ -56,6 +55,54 @@ var getGoodSizes = function(M,N,Z) {
 
 // =======================================
 
+var generateBestGraphicContextIdx = function(multipleDevices) {
+	multipleDevices = multipleDevices || false;
+
+	if ( multipleDevices === true ) {
+		throw new Error("Multiple devices selection is not supported.");
+	}
+
+	var possibleContext = [];
+
+	var platforms = WebCL.getPlatforms();
+	for (var i = 0; i < platforms.length; i++) {
+  		var currP = platforms[i];
+  		var devices = currP.getDevices(WebCL.DEVICE_TYPE_ALL);
+  		
+  		if (devices.length != 0) {
+	  		for (var j = 0; j < devices.length; j++ ) {
+	  			var currD = devices[j];
+	  			var currDtype = parseInt( currD.getInfo(WebCL.DEVICE_TYPE) );
+
+	  			// We need a GPU with at least 2 dimensions workgroups
+	  			if ( ( currDtype & WebCL.DEVICE_TYPE_GPU ) &&
+	  				 ( currD.getInfo(WebCL.DEVICE_MAX_WORK_ITEM_DIMENSIONS) >= 2 ) ) {
+
+		  			possibleContext.push( {
+		  				"pid": i,
+		  				"did": j,
+						"pname": currP.getInfo(WebCL.PLATFORM_NAME),
+		  				"dname": currD.getInfo(WebCL.DEVICE_NAME),
+		  				// "opencl": currD.getInfo(WebCL.DEVICE_OPENCL_C_VERSION),
+		  				"units": currD.getInfo(WebCL.DEVICE_MAX_COMPUTE_UNITS),
+		  				"gmem": currD.getInfo(WebCL.DEVICE_GLOBAL_MEM_SIZE),
+		  				"group": currD.getInfo(WebCL.DEVICE_MAX_WORK_GROUP_SIZE)
+		  			} );  				
+	  			}
+	  		}  			
+  		}
+  	}
+
+  	if (possibleContext.length <= 0) {
+  		throw new Error("Not enough devices.");
+  	}
+
+  	possibleContext.sort( dynamicSortMultiple("units","mem","group") );
+  	return possibleContext[0];
+};
+
+// =======================================
+
 var f_clObject_add = function(obj, array) {
 	array.push(obj);
 };
@@ -82,7 +129,7 @@ var f_multiplyMatrix = function(matA, matBx) {
 	var matB = matBx.transpose();
 
 	// 
-	var bestSingleDevice = new wclWrap.WCLWrapContext().__generateBestGraphicContextIdx();
+	var bestSingleDevice = generateBestGraphicContextIdx();
 	var platform = WebCL.getPlatforms()[bestSingleDevice.pid];
 	var currDevice = platform.getDevices(WebCL.DEVICE_TYPE_ALL)[bestSingleDevice.did];
 	
