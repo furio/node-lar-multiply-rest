@@ -80,12 +80,12 @@ var contextSelector = function(multipleDevices) {
   		var platformSummary = new Array(possiblePlatforms.length);
 
 		possiblePlatforms.forEach(function(el,idx) {
-			platformSummary[idx] = { "pid": -1, "units": 0, "gmem": 0, "group": 0 };
+			platformSummary[idx] = { "pid": -1, "units": 0, "mem": 0, "group": 0 };
 
 			el.forEach(function(insideEl) {
 				platformSummary[idx].pid = insideEl.pid;
 				platformSummary[idx].units += insideEl.units;
-				platformSummary[idx].gmem += insideEl.gmem;
+				platformSummary[idx].mem += insideEl.mem;
 				platformSummary[idx].group += insideEl.group;
 			});
 				
