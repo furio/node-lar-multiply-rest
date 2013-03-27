@@ -19,6 +19,11 @@ A simple REST module that performs sparse matrix multiplication through WebCL/We
 Note that if you incur in some problems, they might be related to the module requires "node-webcl":
 you need to install also its own dependencies that don't get installed automatically (read: https://github.com/furio/node-webcl/blob/master/README.md#dependencies)
 
+## Infos
+
+* Start server with "npm run-script run"
+* Run tests with "npm run-script test"
+
 ## License
 
 (The MIT License)
