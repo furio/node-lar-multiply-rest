@@ -37,16 +37,17 @@ var getWebCLPlatforms = function() {
 var contextSelector = function(multipleDevices) {
 	multipleDevices = multipleDevices || false;
 
+	// All platforms
 	var platforms = getWebCLPlatforms();
 	var possiblePlatforms = new Array(platforms.length);
 
-	for (var i = 0; i < platforms.length; i++) {
-  		var currP = platforms[i];
+	// For each platform
+	platforms.forEach(function(currP, i) {
   		possiblePlatforms[i] = new Array();
   		var devices = currP.getDevices(WebCL.DEVICE_TYPE_ALL);
 	  		
   		if (devices.length != 0) {
-	  		for (var j = 0; j < devices.length; j++ ) {
+	  		devices.forEach(function(currD, j) {
 	  			var currD = devices[j];
 	  			var currDtype = parseInt( currD.getInfo(WebCL.DEVICE_TYPE) );
 
@@ -65,9 +66,9 @@ var contextSelector = function(multipleDevices) {
 		  				"group": currD.getInfo(WebCL.DEVICE_MAX_WORK_GROUP_SIZE)
 		  			} );  				
 	  			}
-	  		}  			
+	  		});  			
   		}
-  	}
+  	});
 
   	if ( !possiblePlatforms.some(function(el) { return (el.length > 0); }) ) {
   		throw new Error("Not enough devices.");
@@ -97,7 +98,8 @@ var contextSelector = function(multipleDevices) {
 
 		return possiblePlatforms[platformSummary[0].pid];
 	} else {
-		var bestDevicePlatform = possiblePlatforms.forEach(function(el) { if(el.length > 0) { bestDevicePlatform.push(el[0]); } });
+		var bestDevicePlatform = [];
+		possiblePlatforms.forEach(function(el) { if(el.length > 0) { bestDevicePlatform.push(el[0]); } });
 		bestDevicePlatform.sort( dynamicSortMultiple("units","mem","group") );
 		return bestDevicePlatform.splice(0,1);
 	}
@@ -213,7 +215,7 @@ WCLWrapContext.prototype.generateBestGraphicContext = function(multipleDevices) 
 	this.generateContext(platformId, deviceIds);
 };
 
-/ ********************** /
+// ********************** //
 
 function WCLWrapKernel(kernelName, contextWrapper) {
 	if (!((typeof(kernelName) == "string") && (kernelName.length > 0))) {
@@ -276,7 +278,7 @@ WCLWrapKernel.prototype.createClKernel = function(argObjList) {
 	return kernelOut;
 };
 
-/ ************************** /
+// ************************** //
 
 exports.WCLWrapContext = WCLWrapContext;
 exports.WCLWrapKernel = WCLWrapKernel;
