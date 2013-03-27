@@ -30,10 +30,14 @@ var dynamicSortMultiple = function() {
 	}
 };
 
+var getWebCLPlatforms = function() {
+	return WebCL.getPlatforms();
+};
+
 var contextSelector = function(multipleDevices) {
 	multipleDevices = multipleDevices || false;
 
-	var platforms = WebCL.getPlatforms();
+	var platforms = getWebCLPlatforms();
 	var possiblePlatforms = new Array(platforms.length);
 
 	for (var i = 0; i < platforms.length; i++) {
@@ -65,18 +69,37 @@ var contextSelector = function(multipleDevices) {
   		}
   	}
 
-  	if (!possiblePlatforms.some(function(el) { return (el.length > 0); }) {
+  	if ( !possiblePlatforms.some(function(el) { return (el.length > 0); }) ) {
   		throw new Error("Not enough devices.");
   	}
 
   	possiblePlatforms.forEach(function(el) { el.sort( dynamicSortMultiple("units","mem","group") ); });
 
   	if ( multipleDevices === true ) {
-		throw new Error("Multiple devices selection is not supported.");
+  		var platformSummary = new Array(possiblePlatforms.length);
+
+		possiblePlatforms.forEach(function(el,idx) {
+			platformSummary[idx] = { "pid": -1, "units": 0, "gmem": 0, "group": 0 };
+
+			el.forEach(function(insideEl) {
+				platformSummary[idx].pid = insideEl.pid;
+				platformSummary[idx].units += insideEl.units;
+				platformSummary[idx].gmem += insideEl.gmem;
+				platformSummary[idx].group += insideEl.group;
+			});
+				
+			platformSummary[idx].units /= el.length;
+			platformSummary[idx].gmem /= el.length;
+			platformSummary[idx].group /= el.length;
+		});
+
+		platformSummary.sort( dynamicSortMultiple("units","mem","group") );
+
+		return possiblePlatforms[platformSummary[0].pid];
 	} else {
-		var bestDevicePlatform = possiblePlatforms.forEach(function(el) { bestDevicePlatform.push(el); });
+		var bestDevicePlatform = possiblePlatforms.forEach(function(el) { if(el.length > 0) { bestDevicePlatform.push(el[0]); } });
 		bestDevicePlatform.sort( dynamicSortMultiple("units","mem","group") );
-		return [bestDevicePlatform[0]];
+		return bestDevicePlatform.splice(0,1);
 	}
 };
 
@@ -107,11 +130,11 @@ function WCLWrapContext() {
 			throw new Error("A context is already in use. Release it before genereating a new one.");
 		}
 
-		if ((platformId < 0) || (platformId >= this.getPlatforms().length)) {
+		if ((platformId < 0) || (platformId >= getWebCLPlatforms().length)) {
 			throw new Error("Unknown platform id");
 		}
 
-		m_currentPlatform = this.getPlatforms()[platformId];
+		m_currentPlatform = getWebCLPlatforms()[platformId];
 
 		var wclwrapObj = this;
 		var usableDevices = [];
@@ -158,10 +181,6 @@ function WCLWrapContext() {
 	};	
 }
 
-WCLWrapContext.prototype.getPlatforms = function() {
-	return WebCL.getPlatforms();
-};
-
 WCLWrapContext.prototype.getCurrentPlatformDevices = function() {
 	if (this.getCurrentPlatform() === null) {
 		throw new Error("You need a platform to select devices.");
@@ -183,13 +202,15 @@ WCLWrapContext.prototype.generateBestGraphicContext = function(multipleDevices) 
 		throw new Error("A context is already in use. Release it before genereating a new one.");
 	}
 
-	var idxChoose = contextSelector(multipleDevices);
-	if (idxChoose.length == 1) {
-		idxChoose = idxChoose[0];
-		this.generateContext(idxChoose.pid, [idxChoose.did]);
-	} else {
+	var devicesJSON = contextSelector(multipleDevices);
+	// By specification we can have only a context on a platform and not across platforms
+	var platformId = devicesJSON[0].pid;
+	// Fetch the devices id (should be only one if multipleDevices is false)
+	var deviceIds = [];
+	devicesJSON.forEach(function(el) { deviceIds.push( el.did ); });
 
-	}
+	// Generate context
+	this.generateContext(platformId, deviceIds);
 };
 
 / ********************** /
