@@ -15,6 +15,7 @@ public/css/admin/*.css
 
 # Windows
 Thumbs.db
+.directory
 
 # Ignore this in Clock Harness projects because it is created by the build system.
 /Config/vhost.conf
