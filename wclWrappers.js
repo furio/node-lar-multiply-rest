@@ -107,11 +107,22 @@ var contextSelector = function(multipleDevices) {
 
 // ***************** //
 
+var WCLWrapMemoryAccess = (function(){
+	var oReturn = {};
+	Object.defineProperty(oReturn, "READ_ONLY", {value : WebCL.MEM_READ_ONLY});
+	Object.defineProperty(oReturn, "WRITE_ONLY", {value : WebCL.MEM_WRITE_ONLY});
+	Object.defineProperty(oReturn, "READ_WRITE", {value : WebCL.MEM_READ_WRITE});
+	return oReturn;
+})();
+
+// ***************** //
+
 function WCLWrapContext() {
+	// Platform, Devices, Context
 	var m_currentPlatform = null;
 	var m_currentDevices = null;
 	var m_currentContext = null;
-
+	
 	this.getCurrentPlatform = function() {
 		return m_currentPlatform;
 	};
@@ -123,6 +134,98 @@ function WCLWrapContext() {
 	this.getCurrentContext = function() {
 		return m_currentContext;
 	};
+
+	// Buffers
+	var m_buffersObject = new Object();
+	var mf_getBufferName = function(bufferName) {
+		var m_prependBufferName = "BUF_";
+		return m_prependBufferName+bufferName;
+	}
+
+	this.createBuffer = function(name, length, destTypeLength, destAccess) {
+		var bufName = mf_getBufferName(name);
+		
+		if ( this.getCurrentContext() === null ) {
+			throw new Error("No context has been initialized.");
+		}
+
+		if ( m_buffersObject.hasOwnProperty(bufName) ) {
+			throw new Error("A buffer already exist with this name");
+		}
+
+		if (!( (destAccess !== WCLWrapMemoryAccess.READ_ONLY) ||
+			 (destAccess !== WCLWrapMemoryAccess.WRITE_ONLY) ||
+			 (destAccess !== WCLWrapMemoryAccess.READ_WRITE) )) {
+
+			throw new Error("Unknown access type");
+		}
+
+		var returnedBuffer = null;
+
+		try {
+			returnedBuffer = this.getCurrentContext().createBuffer(destAccess, length * destTypeLength);	
+		} catch(err) {
+			returnedBuffer = null;
+		}
+
+		if ( returnedBuffer !== null ) {
+			m_buffersObject[bufName] = {"inuse": 0, "buffer": returnedBuffer};
+		}
+		
+		return ( returnedBuffer !== null );
+	};
+
+	this.deleteBuffer = function(name) {
+		var bufName = mf_getBufferName(name);
+		
+		if ( this.getCurrentContext() === null ) {
+			throw new Error("No context has been initialized.");
+		}
+
+		if ( !m_buffersObject.hasOwnProperty(bufName) ) {
+			return true;
+		}
+
+		if ( m_buffersObject[bufName].inuse !== 0 ) {
+			return false;
+		}
+
+		m_buffersObject[bufName].buffer.release();
+		delete m_buffersObject[bufName];
+
+		return true;
+	};
+
+	this.getBuffer = function(name) {
+		var bufName = mf_getBufferName(name);
+
+		if ( this.getCurrentContext() === null ) {
+			throw new Error("No context has been initialized.");
+		}
+
+		if ( !m_buffersObject.hasOwnProperty(bufName) ) {
+			throw new Error("No such buffer exist.");
+		}
+
+		m_buffersObject[bufName].inuse += 1;
+		return m_buffersObject[bufName].buffer;
+	};
+
+	this.giveBuffer = function(name) {
+		var bufName = mf_getBufferName(name);
+
+		if ( this.getCurrentContext() === null ) {
+			throw new Error("No context has been initialized.");
+		}
+
+		if ( !m_buffersObject.hasOwnProperty(bufName) ) {
+			throw new Error("No such buffer exist.");
+		}
+
+		m_buffersObject[bufName].inuse -= 1;
+	};
+
+	// * //
 
 	this.generateContext = function(platformId, deviceIds) {
 		platformId = platformId || 0;
@@ -280,5 +383,6 @@ WCLWrapKernel.prototype.createClKernel = function(argObjList) {
 
 // ************************** //
 
+exports.WCLWrapMemoryAccess = WCLWrapMemoryAccess;
 exports.WCLWrapContext = WCLWrapContext;
 exports.WCLWrapKernel = WCLWrapKernel;
