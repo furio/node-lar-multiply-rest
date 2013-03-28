@@ -1,6 +1,8 @@
 // Set in deploy
-var KEY = "";
+var KEYS = ["",	 // Testing key
+			"",	 // weblar key
+			""]; // prof key
 
 exports.isValidKey = function(theKey) {
-	return (theKey === KEY);
+	return KEYS.some(function(el) { return (el === theKey); });
 };
