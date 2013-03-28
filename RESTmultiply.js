@@ -2,19 +2,43 @@ var USE_CLUSTER = false;
 var USE_WEBCL = false;
 var WEBPORT = 3000;
 
+// Proto libraries
+require("./string.prototype.js");
 // Library from NPM
 var i_express = require('express'),
 	i_gzippo = require('gzippo'),
 	i_cluster = require('cluster'),
+	i_os = require('os'),
 // Custom libraries
 	csr_matrix = require("./csrStuff").csr_matrix,
 	g_webcl = USE_WEBCL ? require("./SpMSpM-Multiply.js") : null,
 	g_apikey = require("./apikey"),
+	g_utils = require("./utils"),
 // Log shortcut
 	log = require("./logging.js").log;
 
-var numCPUs = require('os').cpus().length;
+var numCPUs = i_os.cpus().length;
 var CLUSTER_CHILDS = 1 * numCPUs;
+
+var loadLateWebCL = function() {
+	if (USE_WEBCL === true) {
+		g_webcl = require("./SpMSpM-Multiply.js");
+	}
+};
+
+process.argv.forEach(function(val, index, array) {
+	if ( val === "--webcl" ) {
+		USE_WEBCL = true;
+		loadLateWebCL();
+	} else if ( val === "--cluster" ) {
+		USE_CLUSTER = true;
+	} else if ( val.startsWith("--port=") ) {
+		var newPort = val.slice("--port=".length);
+		if ( g_utils.isUnsignedInteger(newPort) && ( newPort < 65535 ) ) {
+			WEBPORT = newPort;
+		}
+	}
+});
 
 var startClusterServer = function(isCluster) {
 	if ( isCluster === true ) {
