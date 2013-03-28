@@ -294,7 +294,7 @@ var f_multiplyMatrix = function(matA, matBx) {
 		localWS = arraySizes[1];
 	} catch(err) {
 		f_clObject_clear(clObjects);
-		log(err);
+		log.error(err);
 		throw new Error(err);
 	}
 
