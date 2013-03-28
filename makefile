@@ -4,11 +4,15 @@ MOCHAEXEC = ./node_modules/.bin/mocha
 test: test-all
 
 test-all:
-	@$(MOCHAEXEC) $(TESTDIR)/matrixGenerator.test.js \
+	@$(MOCHAEXEC) 	$(TESTDIR)/utils.test.js \
+					$(TESTDIR)/matrixGenerator.test.js \
 					$(TESTDIR)/primeUtils.test.js \
 					$(TESTDIR)/csrStuff.test.js \
 					$(TESTDIR)/SpMSpM-Multiply.test.js
 
+test-utils:
+	@$(MOCHAEXEC) $(TESTDIR)/utils.test.js
+	
 test-matrixgen:
 	@$(MOCHAEXEC) $(TESTDIR)/matrixGenerator.test.js
 
