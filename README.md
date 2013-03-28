@@ -31,6 +31,11 @@ Start server with `./startREST.sh` (*NIX flavour) or `node RESTMultiply.js`. Pos
 * --cluster (enable cluster). _Default: false_
 * --port=1234 (use port 1234 to serve request). _Default: false_
 
+## Infos
+
+* Start server with "npm run-script run"
+* Run tests with "npm run-script test"
+
 ## License
 
 (The MIT License)
