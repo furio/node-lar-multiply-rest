@@ -1,5 +1,6 @@
 var USE_CLUSTER = false;
 var USE_WEBCL = false;
+var WEBPORT = 3000;
 
 // Library from NPM
 var i_express = require('express'),
@@ -8,6 +9,7 @@ var i_express = require('express'),
 // Custom libraries
 	csr_matrix = require("./csrStuff").csr_matrix,
 	g_webcl = USE_WEBCL ? require("./SpMSpM-Multiply.js") : null,
+	g_apikey = require("./apikey"),
 // Log shortcut
 	log = require("./logging.js").log;
 
@@ -30,9 +32,6 @@ var startClusterServer = function(isCluster) {
 };
 
 var childServer = function(isCluster) {
-	// Service configurations
-	var WEBPORT = 3000;
-
 	// App and server placeholder
 	var CURRENT_SERVER = null;
 	var app = i_express();
@@ -117,14 +116,27 @@ var childServer = function(isCluster) {
 		};
 	};
 
-	app.get('/networktest', function(req,res){
-		log.info("GET /networktest");
+    app.get('/', function(req, res) {
+		var dataOut = 'Service UP.';
+		res.send(dataOut);
+	});	
+
+	app.all('/service/:key/*', function(req, res, next) {
+		if ( g_apikey.isValidKey( req.params.key ) ) {
+			next();
+		} else {
+			res.send(401);
+		}
+	});
+
+	app.get('/service/:key/networktest', function(req,res){
+		log.info("GET /service/:key/networktest");
 		// A network performance test
 		callReturnFunction(res)( null, {"array": require("./matrixGenerator.js").generateBinaryMatrix(2000,500) } );
 	});
 
-	app.post('/multiply', function(req,res){
-		log.info("POST /multiply");
+	app.post('/service/:key/multiply', function(req,res){
+		log.info("POST /service/:key/multiply");
 		if ( req.hasOwnProperty("body") ) {
 			if ( req.body.hasOwnProperty("matrixa") && req.body.hasOwnProperty("matrixb") ) {
 				var matrixA = req.body.matrixa;
@@ -145,7 +157,7 @@ var childServer = function(isCluster) {
 	});
 
 	var f_multiply_matrices = function(matrixA, matrixB) {
-			// Import the matrices
+		// Import the matrices
 		log.silly("Importing first matrix");
 		var csrA, csrB;
 

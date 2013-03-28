@@ -90,7 +90,7 @@ var contextSelector = function(multipleDevices) {
 			});
 				
 			platformSummary[idx].units /= el.length;
-			platformSummary[idx].gmem /= el.length;
+			platformSummary[idx].mem /= el.length;
 			platformSummary[idx].group /= el.length;
 		});
 
