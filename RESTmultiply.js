@@ -47,6 +47,12 @@ var startClusterServer = function(isCluster) {
 			for ( var i = 0; i < CLUSTER_CHILDS; ++i ) {
 				i_cluster.fork();
 			}
+			/*
+			i_cluster.on('disconnect', function(worker) {
+				log.error('server child disconnect!');
+				i_cluster.fork();
+			});
+			*/
 		} else {
 			childServer(isCluster);
 		}
