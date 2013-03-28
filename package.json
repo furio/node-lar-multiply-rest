@@ -8,11 +8,12 @@
     "url": "git://github.com/furio/node-lar-multiply-rest.git"
   },
   "engines": {
-      "node": ">= 0.8.20 < 0.9"
+      "node": ">= 0.8.20"
     },
   "dependencies":{
     "gzippo": ">= 0.2.0",
     "express": ">= 3.0.0",
+	"winston": ">= 0.6.0",
     "node-webcl": "https://github.com/furio/node-webcl/tarball/master"
   },
   "devDependencies": {

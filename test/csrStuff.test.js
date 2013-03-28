@@ -62,6 +62,18 @@ describe('csr_matrix', function(){
 		});
 	});
 
+	describe('#isDataInteger()', function(){
+		it('should return true if data array contains only integers', function() {
+			csr_dense.isDataInteger().should.be.true;
+		});
+	});
+
+	describe('#isDataUinteger()', function(){
+		it('should return true if data array contains only unsigned integers', function() {
+			csr_dense.isDataUinteger().should.be.true;
+		});
+	});	
+
 	describe('#isBinary()', function(){
 		it('should return true if data array contains only 1', function() {
 			csr_dense.isBinary().should.be.true;
