@@ -5,11 +5,11 @@ A simple REST module that performs sparse matrix multiplication through WebCL/We
 
 ## Requirements
 
-* node-webcl: patched version from https://github.com/furio/node-webcl
+* node-webcl ([patched version](https://github.com/furio/node-webcl))
 * express
 * gzippo
-* winston
-* mocha, should (for testing)
+* winston _(logging)_
+* mocha, should _(testing)_
 
 ## Installing
 
