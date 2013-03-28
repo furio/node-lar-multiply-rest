@@ -1,5 +1,5 @@
 var USE_CLUSTER = false;
-var USE_WEBCL = true;
+var USE_WEBCL = false;
 
 // Library from NPM
 var i_express = require('express'),
@@ -9,7 +9,7 @@ var i_express = require('express'),
 	csr_matrix = require("./csrStuff").csr_matrix,
 	g_webcl = USE_WEBCL ? require("./SpMSpM-Multiply.js") : null,
 // Log shortcut
-	log = console.log;
+	log = require("./logging.js").log;
 
 var numCPUs = require('os').cpus().length;
 var CLUSTER_CHILDS = 1 * numCPUs;
@@ -17,7 +17,7 @@ var CLUSTER_CHILDS = 1 * numCPUs;
 var startClusterServer = function(isCluster) {
 	if ( isCluster === true ) {
 		if ( i_cluster.isMaster ) {
-			log("Starting a cluster of services with " + CLUSTER_CHILDS + " child(s).");
+			log.info("Starting a cluster of services with " + CLUSTER_CHILDS + " child(s).");
 			for ( var i = 0; i < CLUSTER_CHILDS; ++i ) {
 				i_cluster.fork();
 			}
@@ -40,9 +40,9 @@ var childServer = function(isCluster) {
 	// Startup function
 	var startServer = function(worker) {
 		CURRENT_SERVER = app.listen(WEBPORT);
-		log("Starting 'Matrix Multiply REST service'.");
-		log("Listening on port: " + WEBPORT +".");
-		log("WebCl enabled: " + USE_WEBCL+".");
+		log.info("Starting 'Matrix Multiply REST service'.");
+		log.info("Listening on port: " + WEBPORT + ".");
+		log.info("WebCl enabled: " + USE_WEBCL + ".");
 	};
 
 	// Function type check
@@ -61,7 +61,7 @@ var childServer = function(isCluster) {
 	if (isCluster === false) {
 		// Catch SIGINT
 		process.on('SIGINT', function() {
-			log('Caught SIGINT. Trying to close gracefully.');
+			log.warn('Caught SIGINT. Trying to close gracefully.');
 
 			// Kill server if online
 			if (CURRENT_SERVER !== null) {
@@ -107,7 +107,7 @@ var childServer = function(isCluster) {
 			if (error !== null) {
 				res.send(500, 'Something is broken!\n\nDetails: ' + error + '\n\n');
 			} else {
-				log("Sending results through net (async).");
+				log.info("Sending results through net (async).");
 				if ( JSONdata !== null ) {
 					res.json( JSONdata );
 				} else {
@@ -118,13 +118,13 @@ var childServer = function(isCluster) {
 	};
 
 	app.get('/networktest', function(req,res){
-		log("GET /networktest");
+		log.info("GET /networktest");
 		// A network performance test
 		callReturnFunction(res)( null, {"array": require("./matrixGenerator.js").generateBinaryMatrix(2000,500) } );
 	});
 
 	app.post('/multiply', function(req,res){
-		log("POST /multiply");
+		log.info("POST /multiply");
 		if ( req.hasOwnProperty("body") ) {
 			if ( req.body.hasOwnProperty("matrixa") && req.body.hasOwnProperty("matrixb") ) {
 				var matrixA = req.body.matrixa;
@@ -146,7 +146,7 @@ var childServer = function(isCluster) {
 
 	var f_multiply_matrices = function(matrixA, matrixB) {
 			// Import the matrices
-		log("Importing first matrix");
+		log.silly("Importing first matrix");
 		var csrA, csrB;
 
 		if (matrixA.hasOwnProperty("DATA")) {
@@ -156,9 +156,9 @@ var childServer = function(isCluster) {
 			csrA = new csr_matrix({"numrows": matrixA.ROWCOUNT, "numcols": matrixA.COLCOUNT,
 									"rowptr": matrixA.ROW, "colindices": matrixA.COL});		
 		}
-		log("Imported first matrix: " + csrA.getRowCount() + "x" + csrA.getColCount() );
+		log.silly("Imported first matrix: " + csrA.getRowCount() + "x" + csrA.getColCount() );
 
-		log("Importing second matrix");
+		log.silly("Importing second matrix");
 		if (matrixB.hasOwnProperty("DATA")) {
 			csrB = new csr_matrix({"numrows": matrixB.ROWCOUNT, "numcols": matrixB.COLCOUNT,
 									"rowptr": matrixB.ROW, "colindices": matrixB.COL, "data": matrixB.DATA});
@@ -166,9 +166,9 @@ var childServer = function(isCluster) {
 			csrB = new csr_matrix({"numrows": matrixB.ROWCOUNT, "numcols": matrixB.COLCOUNT,
 									"rowptr": matrixB.ROW, "colindices": matrixB.COL});		
 		}
-		log("Imported second matrix: " + csrB.getRowCount() + "x" + csrB.getColCount() );
+		log.silly("Imported second matrix: " + csrB.getRowCount() + "x" + csrB.getColCount() );
 
-		log("Calculating multiplication");
+		log.silly("Calculating multiplication");
 		var mulStep = null;
 		if (USE_WEBCL) {
 			mulStep = g_webcl.multiplyMatrix(csrA, csrB, true);
@@ -176,9 +176,8 @@ var childServer = function(isCluster) {
 		} else {
 			mulStep = csrA.multiply( csrB );
 		}
-		log("Calculated multiplication. Result matrix: " + mulStep.getRowCount() + "x" + mulStep.getColCount() );
+		log.info("Calculated multiplication. Result matrix: " + mulStep.getRowCount() + "x" + mulStep.getColCount() );
 
-		log("Returning result");
 		return mulStep.toJSON();
 	};
 

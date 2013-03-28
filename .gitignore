@@ -12,6 +12,7 @@ public/css/admin/*.css
 # Sublime
 *.sublime-project
 *.sublime-workspace
+*.log
 
 # Windows
 Thumbs.db

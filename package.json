@@ -13,6 +13,7 @@
   "dependencies":{
     "gzippo": ">= 0.2.0",
     "express": ">= 3.0.0",
+	"winston": ">= 0.6.0",
     "node-webcl": "https://github.com/furio/node-webcl/tarball/master"
   },
   "devDependencies": {

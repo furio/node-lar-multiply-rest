@@ -1,6 +1,6 @@
 var WebCL = require('node-webcl'),
 	fs = require('fs'),
-	log = console.log;
+	log = require("./logging.js").log;
 
 // ***************** //
 

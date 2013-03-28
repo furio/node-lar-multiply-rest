@@ -2,7 +2,7 @@ var csr_matrix = require("./csrStuff").csr_matrix,
 	WebCL = require('node-webcl'),
 	fs = require('fs'),
 	primeUtils = require("./primeUtils.js"),
-	log = console.log;
+	log = require("./logging.js").log;
 
 // =======================================
 
@@ -23,10 +23,10 @@ var getGoodSingleSize = function(X,Z,MINIMUM_DIVISORS,MAXIMUM_TRIES) {
 
 		if ( !primeUtils.isPrime(newX) ) {
 			var currList = primeUtils.listDivisors(newX).filter(filterTooMuch);
-			// log(newX + "-" + currList.length);
+			log.silly(newX + "-" + currList.length);
 			if ( currList.length >= MINIMUM_DIVISORS ) {
 				currList = currList.reverse();
-				// log(newX + "- L: " + currList);
+				log.silly(newX + "- L: " + currList);
 				divX = currList[0];
 				return [newX, divX];
 			}
@@ -42,11 +42,11 @@ var getGoodSingleSize = function(X,Z,MINIMUM_DIVISORS,MAXIMUM_TRIES) {
 var getGoodSizes = function(M,N,Z) {
 	var maxSqrt = Math.ceil( Math.sqrt(Z) );
 	// ----
-	log("Calculating sizes ... [" + M + "," + N + "] Bound: [" + Z + "," + maxSqrt + "]");
+	log.info("Calculating sizes ... [" + M + "," + N + "] Bound: [" + Z + "," + maxSqrt + "]");
 	if ( (M*N) < Z ) {
 		return [ [ M, N ], [ M, N ] ];
 	}
-	log("Calculating sizes ... complex way");
+	log.info("Calculating sizes ... complex way");
 	var Msizes = getGoodSingleSize(M,maxSqrt);
 	var Nsizes = getGoodSingleSize(N,maxSqrt);
 
@@ -160,8 +160,8 @@ var f_multiplyMatrix = function(matA, matBx) {
 	var currDevice = platform.getDevices(WebCL.DEVICE_TYPE_ALL)[bestSingleDevice.did];
 	
 	// Pick platform - device
-	log('using platform: '+ bestSingleDevice.pname);
-	log('using device: '+ bestSingleDevice.dname);
+	log.info('WebCL::using platform: '+ bestSingleDevice.pname);
+	log.info('WebCL::using device: '+ bestSingleDevice.dname);
 
 	// Useful vars for later
 	// BASIC VAR
@@ -176,7 +176,7 @@ var f_multiplyMatrix = function(matA, matBx) {
 		f_clObject_add(context, clObjects);
 	} catch(err) {
 		f_clObject_clear(clObjects);
-		log("Context error: " + err);
+		log.error("Context error: " + err);
 		throw new Error(err);
 	}
 
@@ -194,7 +194,7 @@ var f_multiplyMatrix = function(matA, matBx) {
 		// Create program
 		program = context.createProgram(kernelSource);
 	} catch(err) {
-		log("Program error: " + err);
+		log.error("Program error: " + err);
 		f_clObject_clear(clObjects);
 		throw new Error(err);
 	}
@@ -204,7 +204,7 @@ var f_multiplyMatrix = function(matA, matBx) {
 		program.build(currDevice);
 		f_clObject_add(program, clObjects);
 	} catch(err) {
-		log("Program error: " + program.getBuildInfo(currDevice,WebCL.PROGRAM_BUILD_LOG));
+		log.error("Program error: " + program.getBuildInfo(currDevice,WebCL.PROGRAM_BUILD_LOG));
 		f_clObject_clear(clObjects);
 		throw new Error(err);
 	}
@@ -240,7 +240,7 @@ var f_multiplyMatrix = function(matA, matBx) {
 		f_clObject_add(denseResult, clObjects);
 	} catch(err) {
 		f_clObject_clear(clObjects);
-		log("Error creating buffers: " + err);
+		log.error("Error creating buffers: " + err);
 		throw new Error(err);
 	}
 
@@ -249,7 +249,7 @@ var f_multiplyMatrix = function(matA, matBx) {
 		kernel = program.createKernel(( canWeUseBinaryKernel === true ) ? "spmm_binary_kernel_naive" : "spmm_kernel_naive");
 		f_clObject_add(kernel, clObjects);
 	} catch(err) {
-		log("Error creating kernel: " + program.getBuildInfo(currDevice,WebCL.PROGRAM_BUILD_LOG));
+		log.error("Error creating kernel: " + program.getBuildInfo(currDevice,WebCL.PROGRAM_BUILD_LOG));
 		f_clObject_clear(clObjects);
 		throw new Error(err);
 	}
@@ -280,7 +280,7 @@ var f_multiplyMatrix = function(matA, matBx) {
 		f_clObject_add(queue, clObjects);
 	} catch(err) {
 		f_clObject_clear(clObjects);
-		log("Error creating queue: " + err);
+		log.error("Error creating queue: " + err);
 		throw new Error(err);
 	}
 
@@ -299,10 +299,10 @@ var f_multiplyMatrix = function(matA, matBx) {
 	}
 
 
-	log("DEVICE_MAX_WORK_GROUP_SIZE: " + maxWorkSize);
-	log("Global offset size: " + globalOff);
-	log("Global work item size: " + globalWS);
-	log("Local work item size: " + localWS);
+	log.info("WebCL::DEVICE_MAX_WORK_GROUP_SIZE: " + maxWorkSize);
+	log.info("WebCL::Global offset size: " + globalOff);
+	log.info("WebCL::Global work item size: " + globalWS);
+	log.info("WebCL::Local work item size: " + localWS);
 
 	// The result
 	var MATRIX_RES;
@@ -332,7 +332,7 @@ var f_multiplyMatrix = function(matA, matBx) {
 		queue.flush();
 	} catch(err) {
 		f_clObject_clear(clObjects);
-		log("Errors in memory copy - kernel execution: " + err);
+		log.error("Errors in memory copy - kernel execution: " + err);
 		throw new Error(err);
 	}
 
@@ -346,13 +346,7 @@ var f_multiplyMatrixNewKern = function(matA, matBx) {
 	throw new Error("To be implemented");
 };
 
-var f_commonStartup = function(matA, matBx, enableLogging, newKernel) {
-	if (enableLogging === false) {
-		log = function(){};
-	} else {
-		log = console.log;
-	}
-
+var f_commonStartup = function(matA, matBx, newKernel) {
 	if ( newKernel ) {
 		return new csr_matrix( f_multiplyMatrixNewKern(matA, matBx) );
 	}
@@ -360,12 +354,10 @@ var f_commonStartup = function(matA, matBx, enableLogging, newKernel) {
 	return new csr_matrix( f_multiplyMatrix(matA, matBx) );
 };
 
-exports.multiplyMatrix = function(matA, matBx, enableLogging) {
-	enableLogging = enableLogging || false;
-	return f_commonStartup(matA, matBx, enableLogging, false);
+exports.multiplyMatrix = function(matA, matBx) {
+	return f_commonStartup(matA, matBx, false);
 };
 
-exports.multiplyMatrixNew = function(matA, matBx, enableLogging) {
-	enableLogging = enableLogging || false;
-	return f_commonStartup(matA, matBx, enableLogging, true);
+exports.multiplyMatrixNew = function(matA, matBx) {
+	return f_commonStartup(matA, matBx, true);
 };
