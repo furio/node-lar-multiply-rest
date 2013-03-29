@@ -1,3 +1,5 @@
+/* jshint bitwise: false */
+
 var csr_matrix = require("./csrStuff").csr_matrix,
 	WebCL = require('node-webcl'),
 	fs = require('fs'),
@@ -56,12 +58,11 @@ var getGoodSizes = function(M,N,Z) {
 // =======================================
 
 var dynamicSortMultiple = function() {
-	var dynamicSort = function(property) { 
-	    return function (obj1,obj2) {
-	        return obj1[property] > obj2[property] ? 1
-	            : obj1[property] < obj2[property] ? -1 : 0;
-	    }
-	}
+	var dynamicSort = function(property) {
+		return function (obj1,obj2) {
+			return obj1[property] > obj2[property] ? 1 : obj1[property] < obj2[property] ? -1 : 0;
+		};
+	};
     /*
      * save the arguments object as it will be overwritten
      * note that arguments object is an array-like object
@@ -78,7 +79,7 @@ var dynamicSortMultiple = function() {
 			i++;
 		}
 		return result;
-	}
+	};
 };
 
 var generateBestGraphicContextIdx = function(multipleDevices) {
@@ -92,39 +93,39 @@ var generateBestGraphicContextIdx = function(multipleDevices) {
 
 	var platforms = WebCL.getPlatforms();
 	for (var i = 0; i < platforms.length; i++) {
-  		var currP = platforms[i];
-  		var devices = currP.getDevices(WebCL.DEVICE_TYPE_ALL);
-  		
-  		if (devices.length != 0) {
-	  		for (var j = 0; j < devices.length; j++ ) {
-	  			var currD = devices[j];
-	  			var currDtype = parseInt( currD.getInfo(WebCL.DEVICE_TYPE) );
+		var currP = platforms[i];
+		var devices = currP.getDevices(WebCL.DEVICE_TYPE_ALL);
 
-	  			// We need a GPU with at least 2 dimensions workgroups
-	  			if ( ( currDtype & WebCL.DEVICE_TYPE_GPU ) &&
-	  				 ( currD.getInfo(WebCL.DEVICE_MAX_WORK_ITEM_DIMENSIONS) >= 2 ) ) {
+		if (devices.length !== 0) {
+			for (var j = 0; j < devices.length; j++ ) {
+				var currD = devices[j];
+				var currDtype = parseInt( currD.getInfo(WebCL.DEVICE_TYPE), 10 );
 
-		  			possibleContext.push( {
-		  				"pid": i,
-		  				"did": j,
+				// We need a GPU with at least 2 dimensions workgroups
+				if ( ( currDtype & WebCL.DEVICE_TYPE_GPU ) &&
+					( currD.getInfo(WebCL.DEVICE_MAX_WORK_ITEM_DIMENSIONS) >= 2 ) ) {
+
+					possibleContext.push( {
+						"pid": i,
+						"did": j,
 						"pname": currP.getInfo(WebCL.PLATFORM_NAME),
-		  				"dname": currD.getInfo(WebCL.DEVICE_NAME),
-		  				// "opencl": currD.getInfo(WebCL.DEVICE_OPENCL_C_VERSION),
-		  				"units": currD.getInfo(WebCL.DEVICE_MAX_COMPUTE_UNITS),
-		  				"gmem": currD.getInfo(WebCL.DEVICE_GLOBAL_MEM_SIZE),
-		  				"group": currD.getInfo(WebCL.DEVICE_MAX_WORK_GROUP_SIZE)
-		  			} );  				
-	  			}
-	  		}  			
-  		}
-  	}
+						"dname": currD.getInfo(WebCL.DEVICE_NAME),
+						// "opencl": currD.getInfo(WebCL.DEVICE_OPENCL_C_VERSION),
+						"units": currD.getInfo(WebCL.DEVICE_MAX_COMPUTE_UNITS),
+						"gmem": currD.getInfo(WebCL.DEVICE_GLOBAL_MEM_SIZE),
+						"group": currD.getInfo(WebCL.DEVICE_MAX_WORK_GROUP_SIZE)
+					});
+				}
+			}
+		}
+	}
 
-  	if (possibleContext.length <= 0) {
-  		throw new Error("Not enough devices.");
-  	}
+	if (possibleContext.length <= 0) {
+		throw new Error("Not enough devices.");
+	}
 
-  	possibleContext.sort( dynamicSortMultiple("units","mem","group") );
-  	return possibleContext[0];
+	possibleContext.sort( dynamicSortMultiple("units","mem","group") );
+	return possibleContext[0];
 };
 
 // =======================================
@@ -158,7 +159,7 @@ var f_multiplyMatrix = function(matA, matBx) {
 	var bestSingleDevice = generateBestGraphicContextIdx();
 	var platform = WebCL.getPlatforms()[bestSingleDevice.pid];
 	var currDevice = platform.getDevices(WebCL.DEVICE_TYPE_ALL)[bestSingleDevice.did];
-	
+
 	// Pick platform - device
 	log.info('WebCL::using platform: '+ bestSingleDevice.pname);
 	log.info('WebCL::using device: '+ bestSingleDevice.dname);

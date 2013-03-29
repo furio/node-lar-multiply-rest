@@ -9,8 +9,8 @@ var isUInteger = function(value) {
 	return (!isNaN(value) && (Math.floor(value) === value) && (value >= 0));
 };
 
-var isOnlyOnes = function(el) { 
-	return (el === 1); 
+var isOnlyOnes = function(el) {
+	return (el === 1);
 };
 
 var newFilledArray = function(len, val) {
@@ -72,7 +72,7 @@ csr_matrix.prototype.getData = function(useTypedArrays, useBestIntegerType) {
 	if (useTypedArrays) {
 		var tmp_data, currentData;
 		currentData = this.data;
-		
+
 		if ( useBestIntegerType ) {
 			if ( currentData.every( isUInteger ) ) {
 				tmp_data = new Uint32Array(currentData.length);
@@ -82,7 +82,7 @@ csr_matrix.prototype.getData = function(useTypedArrays, useBestIntegerType) {
 		} else {
 			tmp_data = new Float32Array(currentData.length);
 		}
-		
+
 		currentData.forEach(function(i,idx) { tmp_data[idx] = i; } );
 		return tmp_data;
 	} else {
