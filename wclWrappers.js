@@ -320,6 +320,7 @@ WCLWrapContext.prototype.generateBestGraphicContext = function(multipleDevices) 
 
 // ********************** //
 
+
 function WCLWrapKernel(kernelName, contextWrapper) {
 	if (!((typeof(kernelName) == "string") && (kernelName.length > 0))) {
 		throw new Error("Need a kernel function name as input");
@@ -333,21 +334,55 @@ function WCLWrapKernel(kernelName, contextWrapper) {
 		throw new Error("Need a WCLWrapContext with a live context enabled");
 	}
 
-	this.kernelName = kernelName;
-	this.contextWrap = contextWrapper;
+	var m_kernelName = kernelName;
+	var m_contextWrap = contextWrapper;
+	var m_kernelContent = null;
+	var m_kernelReplaces = {};
+	var m_kernelDefines = {};
+
+	this.getKernelName = function() {
+		return m_kernelName;
+	};
+
+	this.getContextWrap = function() {
+		return m_contextWrap;
+	};
+
+	this.getReplaceMap = function() {
+		return m_kernelReplaces;
+	};
+
+	this.getDefinesMap = function() {
+		return m_kernelDefines;
+	};
+
+	this.loadKernelFromFile = function(filePath) {
+		m_kernelContent = fs.readFileSync(filePath, 'ascii');
+	};
+
+	this.loadKernelFromString = function(kernelString) {
+		m_kernelContent = kernelString;
+	};
+
+	this.addKernelReplace = function(key,value) {
+		if ( m_kernelReplaces.hasOwnProperty(key) ) {
+			log.silly("key already exist in m_kernelReplaces");
+		}
+		m_kernelReplaces[key] = value;
+	};
+
+	this.addKernelDefine = function(key,value) {
+		if ( m_kernelDefines.hasOwnProperty(key) ) {
+			log.silly("key already exist in m_kernelDefines");
+		}		
+		m_kernelDefines[key] = value;
+	};
+
+	this.describeKernelVars = function(position, buffNameOrlocalSize) {
+
+	};
 }
 
-WCLWrapKernel.prototype.loadKernelFromFile = function(filePath) {
-	this.kernelString = fs.readFileSync(filePath, 'ascii');
-};
-
-WCLWrapKernel.prototype.loadKernelFromString = function(kernelString) {
-	this.kernelString = kernelString;
-};
-
-WCLWrapKernel.prototype.replaceKernelSourceVar = function(sourceVar, sourceContent) {
-	this.kernelString = this.kernelString.replace(sourceVar, sourceContent);
-};
 
 WCLWrapKernel.prototype.createClKernel = function(argObjList) {
 	var kernelOut = null, program = null;
