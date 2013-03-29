@@ -1,3 +1,5 @@
+/* jshint bitwise: false */
+
 var WebCL = require('node-webcl'),
 	fs = require('fs'),
 	log = require("./logging.js").log;
@@ -5,13 +7,12 @@ var WebCL = require('node-webcl'),
 // ***************** //
 
 var dynamicSortMultiple = function() {
-	var dynamicSort = function(property) { 
-	    return function (obj1,obj2) {
-	        return obj1[property] > obj2[property] ? 1
-	            : obj1[property] < obj2[property] ? -1 : 0;
-	    }
-	}
-    /*
+	var dynamicSort = function(property) {
+		return function (obj1,obj2) {
+			return obj1[property] > obj2[property] ? 1 : obj1[property] < obj2[property] ? -1 : 0;
+		};
+	};
+	/*
      * save the arguments object as it will be overwritten
      * note that arguments object is an array-like object
      * consisting of the names of the properties to sort by
@@ -27,7 +28,7 @@ var dynamicSortMultiple = function() {
 			i++;
 		}
 		return result;
-	}
+	};
 };
 
 var getWebCLPlatforms = function() {
@@ -43,41 +44,40 @@ var contextSelector = function(multipleDevices) {
 
 	// For each platform
 	platforms.forEach(function(currP, i) {
-  		possiblePlatforms[i] = new Array();
-  		var devices = currP.getDevices(WebCL.DEVICE_TYPE_ALL);
-	  		
-  		if (devices.length != 0) {
-	  		devices.forEach(function(currD, j) {
-	  			var currD = devices[j];
-	  			var currDtype = parseInt( currD.getInfo(WebCL.DEVICE_TYPE) );
+		possiblePlatforms[i] = [];
+		var devices = currP.getDevices(WebCL.DEVICE_TYPE_ALL);
 
-	  			// We need a GPU with at least 2 dimensions workgroups
-	  			if ( ( currDtype & WebCL.DEVICE_TYPE_GPU ) &&
-	  				 ( currD.getInfo(WebCL.DEVICE_MAX_WORK_ITEM_DIMENSIONS) >= 2 ) ) {
+		if (devices.length !== 0) {
+			devices.forEach(function(currD, j) {
+				var currDtype = parseInt( currD.getInfo(WebCL.DEVICE_TYPE), 10 );
 
-		  			possiblePlatforms[i].push( {
-		  				"pid": i,
-		  				"did": j,
+				// We need a GPU with at least 2 dimensions workgroups
+				if ( ( currDtype & WebCL.DEVICE_TYPE_GPU ) &&
+					( currD.getInfo(WebCL.DEVICE_MAX_WORK_ITEM_DIMENSIONS) >= 2 ) ) {
+
+					possiblePlatforms[i].push( {
+						"pid": i,
+						"did": j,
 						"pname": currP.getInfo(WebCL.PLATFORM_NAME),
-		  				"dname": currD.getInfo(WebCL.DEVICE_NAME),
-		  				// "opencl": currD.getInfo(WebCL.DEVICE_OPENCL_C_VERSION),
-		  				"units": currD.getInfo(WebCL.DEVICE_MAX_COMPUTE_UNITS),
-		  				"gmem": currD.getInfo(WebCL.DEVICE_GLOBAL_MEM_SIZE),
-		  				"group": currD.getInfo(WebCL.DEVICE_MAX_WORK_GROUP_SIZE)
-		  			} );  				
-	  			}
-	  		});  			
-  		}
-  	});
+						"dname": currD.getInfo(WebCL.DEVICE_NAME),
+						// "opencl": currD.getInfo(WebCL.DEVICE_OPENCL_C_VERSION),
+						"units": currD.getInfo(WebCL.DEVICE_MAX_COMPUTE_UNITS),
+						"gmem": currD.getInfo(WebCL.DEVICE_GLOBAL_MEM_SIZE),
+						"group": currD.getInfo(WebCL.DEVICE_MAX_WORK_GROUP_SIZE)
+					} );
+				}
+			});
+		}
+	});
 
-  	if ( !possiblePlatforms.some(function(el) { return (el.length > 0); }) ) {
-  		throw new Error("Not enough devices.");
-  	}
+	if ( !possiblePlatforms.some(function(el) { return (el.length > 0); }) ) {
+		throw new Error("Not enough devices.");
+	}
 
-  	possiblePlatforms.forEach(function(el) { el.sort( dynamicSortMultiple("units","mem","group") ); });
+	possiblePlatforms.forEach(function(el) { el.sort( dynamicSortMultiple("units","mem","group") ); });
 
-  	if ( multipleDevices === true ) {
-  		var platformSummary = new Array(possiblePlatforms.length);
+	if ( multipleDevices === true ) {
+		var platformSummary = new Array(possiblePlatforms.length);
 
 		possiblePlatforms.forEach(function(el,idx) {
 			platformSummary[idx] = { "pid": -1, "units": 0, "mem": 0, "group": 0 };
@@ -88,7 +88,7 @@ var contextSelector = function(multipleDevices) {
 				platformSummary[idx].mem += insideEl.mem;
 				platformSummary[idx].group += insideEl.group;
 			});
-				
+
 			platformSummary[idx].units /= el.length;
 			platformSummary[idx].mem /= el.length;
 			platformSummary[idx].group /= el.length;
@@ -122,7 +122,7 @@ function WCLWrapContext() {
 	var m_currentPlatform = null;
 	var m_currentDevices = null;
 	var m_currentContext = null;
-	
+
 	this.getCurrentPlatform = function() {
 		return m_currentPlatform;
 	};
@@ -136,15 +136,15 @@ function WCLWrapContext() {
 	};
 
 	// Buffers
-	var m_buffersObject = new Object();
+	var m_buffersObject = {};
 	var mf_getBufferName = function(bufferName) {
 		var m_prependBufferName = "BUF_";
 		return m_prependBufferName+bufferName;
-	}
+	};
 
 	this.createBuffer = function(name, length, destTypeLength, destAccess) {
 		var bufName = mf_getBufferName(name);
-		
+
 		if ( this.getCurrentContext() === null ) {
 			throw new Error("No context has been initialized.");
 		}
@@ -154,8 +154,8 @@ function WCLWrapContext() {
 		}
 
 		if (!( (destAccess !== WCLWrapMemoryAccess.READ_ONLY) ||
-			 (destAccess !== WCLWrapMemoryAccess.WRITE_ONLY) ||
-			 (destAccess !== WCLWrapMemoryAccess.READ_WRITE) )) {
+				(destAccess !== WCLWrapMemoryAccess.WRITE_ONLY) ||
+				(destAccess !== WCLWrapMemoryAccess.READ_WRITE) )) {
 
 			throw new Error("Unknown access type");
 		}
@@ -163,7 +163,7 @@ function WCLWrapContext() {
 		var returnedBuffer = null;
 
 		try {
-			returnedBuffer = this.getCurrentContext().createBuffer(destAccess, length * destTypeLength);	
+			returnedBuffer = this.getCurrentContext().createBuffer(destAccess, length * destTypeLength);
 		} catch(err) {
 			returnedBuffer = null;
 		}
@@ -171,13 +171,13 @@ function WCLWrapContext() {
 		if ( returnedBuffer !== null ) {
 			m_buffersObject[bufName] = {"inuse": 0, "buffer": returnedBuffer};
 		}
-		
+
 		return ( returnedBuffer !== null );
 	};
 
 	this.deleteBuffer = function(name) {
 		var bufName = mf_getBufferName(name);
-		
+
 		if ( this.getCurrentContext() === null ) {
 			throw new Error("No context has been initialized.");
 		}
@@ -274,16 +274,16 @@ function WCLWrapContext() {
 			m_currentDevices = null;
 			m_currentContext = null;
 
-			throw new Error("Error while creating context for " + currentPlatform + ".\n"+err);
+			throw new Error("Error while creating context for " + currPlatform + ".\n"+err);
 		}
 	};
 
 	this.releaseContext = function() {
 		if ( this.getCurrentContext() !== null ) {
 			this.getCurrentContext().release();
-			m_currentContext = null;		
+			m_currentContext = null;
 		}
-	};	
+	};
 }
 
 WCLWrapContext.prototype.getCurrentPlatformDevices = function() {

@@ -149,7 +149,7 @@ var childServer = function(isCluster) {
     app.get('/', function(req, res) {
 		var dataOut = 'Service UP.';
 		res.send(dataOut);
-	});	
+	});
 
 	app.all('/service/:key/*', function(req, res, next) {
 		if ( g_apikey.isValidKey( req.params.key ) ) {
@@ -196,7 +196,7 @@ var childServer = function(isCluster) {
 									"rowptr": matrixA.ROW, "colindices": matrixA.COL, "data": matrixA.DATA});
 		} else {
 			csrA = new csr_matrix({"numrows": matrixA.ROWCOUNT, "numcols": matrixA.COLCOUNT,
-									"rowptr": matrixA.ROW, "colindices": matrixA.COL});		
+									"rowptr": matrixA.ROW, "colindices": matrixA.COL});
 		}
 		log.silly("Imported first matrix: " + csrA.getRowCount() + "x" + csrA.getColCount() );
 
@@ -206,7 +206,7 @@ var childServer = function(isCluster) {
 									"rowptr": matrixB.ROW, "colindices": matrixB.COL, "data": matrixB.DATA});
 		} else {
 			csrB = new csr_matrix({"numrows": matrixB.ROWCOUNT, "numcols": matrixB.COLCOUNT,
-									"rowptr": matrixB.ROW, "colindices": matrixB.COL});		
+									"rowptr": matrixB.ROW, "colindices": matrixB.COL});
 		}
 		log.silly("Imported second matrix: " + csrB.getRowCount() + "x" + csrB.getColCount() );
 
