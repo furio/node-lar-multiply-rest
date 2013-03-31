@@ -31,87 +31,155 @@ var dynamicSortMultiple = function() {
 	};
 };
 
-var getWebCLPlatforms = function() {
+// ***************** //
+
+/// TODO: Better abstraction => WebCLPlatform (new object representing a platform) should have fetchAllDevices
+///	so that WebCLDevice has only member platform pointing to his WebCLPlatform owner. Possibly
+
+var WebCLDevice = function() {
+	if (!(this instanceof WebCLDevice)) {
+		return new WebCLDevice();
+	}
+
+	Object.defineProperty(this, "platformId", {writable: true});
+	Object.defineProperty(this, "platformName", {writable: true});
+	Object.defineProperty(this, "deviceId", {writable: true});
+	Object.defineProperty(this, "deviceName", {writable: true});
+	Object.defineProperty(this, "supportedOpenclVersion", {writable: true});
+	Object.defineProperty(this, "coreUnits", {writable: true});
+	Object.defineProperty(this, "globalMemory", {writable: true});
+	Object.defineProperty(this, "maximumWorkgroupSize", {writable: true});
+	Object.defineProperty(this, "maximumWorkitemSize", {writable: true});
+	Object.defineProperty(this, "isGpu", {writable: true});
+};
+
+// ***************** //
+
+var DeviceSelector = {};
+DeviceSelector.fetchAllPlatforms = function() {
 	return WebCL.getPlatforms();
 };
 
-var contextSelector = function(multipleDevices) {
-	multipleDevices = multipleDevices || false;
+DeviceSelector.fetchAllDevices = function() {
+	var allPlatforms = this.fetchAllPlatforms();
+	var possiblePlatforms = new Array(allPlatforms.length);
 
-	// All platforms
-	var platforms = getWebCLPlatforms();
-	var possiblePlatforms = new Array(platforms.length);
-
-	// For each platform
-	platforms.forEach(function(currP, i) {
+	allPlatforms.forEach(function(currPlatform, i) {
 		possiblePlatforms[i] = [];
-		var devices = currP.getDevices(WebCL.DEVICE_TYPE_ALL);
+		var platformName = currPlatform.getInfo(WebCL.PLATFORM_NAME);
+		var platformDevices = currPlatform.getDevices(WebCL.DEVICE_TYPE_ALL);
 
-		if (devices.length !== 0) {
-			devices.forEach(function(currD, j) {
-				var currDtype = parseInt( currD.getInfo(WebCL.DEVICE_TYPE), 10 );
+		if (platformDevices.length !== 0) {
+			platformDevices.forEach(function(currDevice, j) {
+				var currDevicetype = parseInt( currDevice.getInfo(WebCL.DEVICE_TYPE), 10 );
+				var newDevice = new WebCLDevice();
 
-				// We need a GPU with at least 2 dimensions workgroups
-				if ( ( currDtype & WebCL.DEVICE_TYPE_GPU ) &&
-					( currD.getInfo(WebCL.DEVICE_MAX_WORK_ITEM_DIMENSIONS) >= 2 ) ) {
+				newDevice.platformId = i;
+				newDevice.platformName = platformName;
+				newDevice.deviceId = j;
+				newDevice.deviceName = currDevice.getInfo(WebCL.DEVICE_NAME);
+				newDevice.supportedOpenclVersion = currDevice.getInfo(WebCL.DEVICE_OPENCL_C_VERSION);
+				newDevice.coreUnits = currDevice.getInfo(WebCL.DEVICE_MAX_COMPUTE_UNITS);
+				newDevice.globalMemory = currDevice.getInfo(WebCL.DEVICE_GLOBAL_MEM_SIZE);
+				newDevice.maximumWorkgroupSize = currDevice.getInfo(WebCL.DEVICE_MAX_WORK_GROUP_SIZE);
+				newDevice.maximumWorkitemSize = currDevice.getInfo(WebCL.DEVICE_MAX_WORK_ITEM_DIMENSIONS);
+				newDevice.isGpu = ( currDevicetype & WebCL.DEVICE_TYPE_GPU );
 
-					possiblePlatforms[i].push( {
-						"pid": i,
-						"did": j,
-						"pname": currP.getInfo(WebCL.PLATFORM_NAME),
-						"dname": currD.getInfo(WebCL.DEVICE_NAME),
-						// "opencl": currD.getInfo(WebCL.DEVICE_OPENCL_C_VERSION),
-						"units": currD.getInfo(WebCL.DEVICE_MAX_COMPUTE_UNITS),
-						"gmem": currD.getInfo(WebCL.DEVICE_GLOBAL_MEM_SIZE),
-						"group": currD.getInfo(WebCL.DEVICE_MAX_WORK_GROUP_SIZE)
-					} );
-				}
+				possiblePlatforms[i].push( newDevice );
 			});
 		}
 	});
+
+	return possiblePlatforms;
+};
+
+DeviceSelector.fetchGraphicDevices = function() {
+	var possiblePlatforms = this.fetchAllDevices();
+	var filteredPlatform = new Array(possiblePlatforms.length);
+
+	possiblePlatforms.forEach(function(currPlatform, i) {
+		filteredPlatform[i] = currPlatform.filter(function(device) {
+			return (device.isGpu === true);
+		});
+	});
+
+	return filteredPlatform;
+};
+
+DeviceSelector.fetchGraphicDevicesWithMoreWorkDimension = function() {
+	var possiblePlatforms = this.fetchGraphicDevices();
+	var filteredPlatform = new Array(possiblePlatforms.length);
+
+	possiblePlatforms.forEach(function(currPlatform, i) {
+		filteredPlatform[i] = currPlatform.filter(function(device) {
+			return (device.maximumWorkitemSize > 1);
+		});
+	});
+
+	return filteredPlatform;
+};
+
+DeviceSelector.selectBestGraphicDevice = function() {
+	var possiblePlatforms = this.fetchGraphicDevicesWithMoreWorkDimension();
 
 	if ( !possiblePlatforms.some(function(el) { return (el.length > 0); }) ) {
 		throw new Error("Not enough devices.");
 	}
 
-	possiblePlatforms.forEach(function(el) { el.sort( dynamicSortMultiple("units","mem","group") ); });
+	possiblePlatforms.forEach(function(el) { el.sort( dynamicSortMultiple("coreUnits","globalMemory","maximumWorkgroupSize") ); });
 
-	if ( multipleDevices === true ) {
-		var platformSummary = new Array(possiblePlatforms.length);
+	var bestDevicePlatform = [];
+	possiblePlatforms.forEach(function(el) { if(el.length > 0) { bestDevicePlatform.push(el[0]); } });
+	bestDevicePlatform.sort( dynamicSortMultiple("coreUnits","globalMemory","maximumWorkgroupSize") );
 
-		possiblePlatforms.forEach(function(el,idx) {
-			platformSummary[idx] = { "pid": -1, "units": 0, "mem": 0, "group": 0 };
+	return bestDevicePlatform.splice(0,1);
+};
 
-			el.forEach(function(insideEl) {
-				platformSummary[idx].pid = insideEl.pid;
-				platformSummary[idx].units += insideEl.units;
-				platformSummary[idx].mem += insideEl.mem;
-				platformSummary[idx].group += insideEl.group;
-			});
+DeviceSelector.selectBestGraphicPlatform = function() {
+	var possiblePlatforms = this.fetchGraphicDevicesWithMoreWorkDimension();
 
-			platformSummary[idx].units /= el.length;
-			platformSummary[idx].mem /= el.length;
-			platformSummary[idx].group /= el.length;
+	if ( !possiblePlatforms.some(function(el) { return (el.length > 0); }) ) {
+		throw new Error("Not enough devices.");
+	}
+
+	possiblePlatforms.forEach(function(el) { el.sort( dynamicSortMultiple("coreUnits","globalMemory","maximumWorkgroupSize") ); });
+
+	var platformSummary = new Array(possiblePlatforms.length);
+
+	possiblePlatforms.forEach(function(currPlatform, i) {
+		// Create a fake device that is the weighted sum of all devices for that platform
+		var summaryDevice = new WebCLDevice();
+
+		summaryDevice.platformId = -1;
+		summaryDevice.coreUnits = 0;
+		summaryDevice.globalMemory = 0;
+		summaryDevice.maximumWorkgroupSize = 0;
+
+		currPlatform.forEach(function(currDevice) {
+			summaryDevice.platformId = currDevice.platformId;
+			summaryDevice.coreUnits += currDevice.coreUnits;
+			summaryDevice.globalMemory += currDevice.globalMemory;
+			summaryDevice.maximumWorkgroupSize += currDevice.maximumWorkgroupSize;
 		});
 
-		platformSummary.sort( dynamicSortMultiple("units","mem","group") );
+		summaryDevice.coreUnits /= currPlatform.length;
+		summaryDevice.globalMemory /= currPlatform.length;
+		summaryDevice.maximumWorkgroupSize /= currPlatform.length;
+		platformSummary[i] = summaryDevice;
+	});
 
-		return possiblePlatforms[platformSummary[0].pid];
-	} else {
-		var bestDevicePlatform = [];
-		possiblePlatforms.forEach(function(el) { if(el.length > 0) { bestDevicePlatform.push(el[0]); } });
-		bestDevicePlatform.sort( dynamicSortMultiple("units","mem","group") );
-		return bestDevicePlatform.splice(0,1);
-	}
+	platformSummary.sort( dynamicSortMultiple("coreUnits","globalMemory","maximumWorkgroupSize") );
+
+	return possiblePlatforms[platformSummary[0].platformId];
 };
 
 // ***************** //
 
 var WCLWrapMemoryAccess = (function(){
 	var oReturn = {};
-	Object.defineProperty(oReturn, "READ_ONLY", {value : WebCL.MEM_READ_ONLY});
-	Object.defineProperty(oReturn, "WRITE_ONLY", {value : WebCL.MEM_WRITE_ONLY});
-	Object.defineProperty(oReturn, "READ_WRITE", {value : WebCL.MEM_READ_WRITE});
+	Object.defineProperty(oReturn, "READ_ONLY", {enumerable: true, value : WebCL.MEM_READ_ONLY});
+	Object.defineProperty(oReturn, "WRITE_ONLY", {enumerable: true, value : WebCL.MEM_WRITE_ONLY});
+	Object.defineProperty(oReturn, "READ_WRITE", {enumerable: true, value : WebCL.MEM_READ_WRITE});
 	return oReturn;
 })();
 
@@ -235,11 +303,11 @@ function WCLWrapContext() {
 			throw new Error("A context is already in use. Release it before genereating a new one.");
 		}
 
-		if ((platformId < 0) || (platformId >= getWebCLPlatforms().length)) {
+		if ((platformId < 0) || (platformId >= DeviceSelector.fetchAllPlatforms().length)) {
 			throw new Error("Unknown platform id");
 		}
 
-		m_currentPlatform = getWebCLPlatforms()[platformId];
+		m_currentPlatform = DeviceSelector.fetchAllPlatforms()[platformId];
 
 		var wclwrapObj = this;
 		var usableDevices = [];
@@ -286,33 +354,33 @@ function WCLWrapContext() {
 	};
 }
 
-WCLWrapContext.prototype.getCurrentPlatformDevices = function() {
-	if (this.getCurrentPlatform() === null) {
-		throw new Error("You need a platform to select devices.");
-	}
-
-	return this.getCurrentPlatform().getDevices(WebCL.DEVICE_TYPE_ALL);
-};
-
-WCLWrapContext.prototype.getGraphicDevices = function() {
-	if (this.getCurrentPlatform() === null) {
-		throw new Error("You need a platform to select devices.");
-	}
-
-	return this.getCurrentPlatform().getDevices(WebCL.DEVICE_TYPE_GPU);
-};
 
 WCLWrapContext.prototype.generateBestGraphicContext = function(multipleDevices) {
+	multipleDevices = multipleDevices || false;
+
+	// No if we already have an instance
 	if ( this.getCurrentContext() !== null ) {
 		throw new Error("A context is already in use. Release it before genereating a new one.");
 	}
 
-	var devicesJSON = contextSelector(multipleDevices);
+	var usableDevices = null;
+
+	try {
+		usableDevices = (multipleDevices === true) ?
+								DeviceSelector.selectBestGraphicPlatform()
+							:
+								DeviceSelector.selectBestGraphicDevice();
+	} catch (err) {
+		throw Error("Error while selecting devices/platforms: " + err.toString());
+	}
+
+
 	// By specification we can have only a context on a platform and not across platforms
-	var platformId = devicesJSON[0].pid;
+	var platformId = usableDevices[0].platformId;
+
 	// Fetch the devices id (should be only one if multipleDevices is false)
 	var deviceIds = [];
-	devicesJSON.forEach(function(el) { deviceIds.push( el.did ); });
+	usableDevices.forEach(function(el) { deviceIds.push( el.deviceIds ); });
 
 	// Generate context
 	this.generateContext(platformId, deviceIds);
@@ -374,7 +442,7 @@ function WCLWrapKernel(kernelName, contextWrapper) {
 	this.addKernelDefine = function(key,value) {
 		if ( m_kernelDefines.hasOwnProperty(key) ) {
 			log.silly("key already exist in m_kernelDefines");
-		}		
+		}
 		m_kernelDefines[key] = value;
 	};
 
