@@ -42,7 +42,7 @@ var WCLPlatform = function() {
 	Object.defineProperty(this, "platformName", {enumerable:true, writable: true});
 	Object.defineProperty(this, "platformDevices", {enumerable:true, writable: true});
 	Object.defineProperty(this, "_platformPtr", {enumerable:false, writable: true});
-	
+
 	this.getPtrImplementation = function(){ return this._platformPtr; };
 };
 
@@ -61,7 +61,7 @@ var WCLDevice = function() {
 	Object.defineProperty(this, "maximumWorkitemSize", {enumerable:true, writable: true});
 	Object.defineProperty(this, "isGpu", {enumerable:true, writable: true});
 	Object.defineProperty(this, "_devicePtr", {enumerable:false, writable: true});
-	
+
 	this.getPtrImplementation = function(){ return this._devicePtr; };
 };
 
@@ -76,7 +76,7 @@ DeviceSelector._fetchAllPlatformsCL = function() {
 DeviceSelector._fetchPlatformDevices = function(platformObj) {
 	if (!(platformObj instanceof WCLPlatform)) {
 		throw new Error("It must be an instance of WebCLPlatform");
-	}	
+	}
 
 	var platformDevices = platformObj.getPtrImplementation().getDevices(WebCL.DEVICE_TYPE_ALL);
 	var possibleDevices = new Array(platformDevices.length);
@@ -163,15 +163,15 @@ DeviceSelector.selectBestGraphicDevice = function() {
 		throw new Error("Not enough devices.");
 	}
 
-	possiblePlatforms.forEach(function(el) { 
-		el.platformDevices.sort( dynamicSortMultiple("coreUnits","globalMemory","maximumWorkgroupSize") ); 
+	possiblePlatforms.forEach(function(el) {
+		el.platformDevices.sort( dynamicSortMultiple("coreUnits","globalMemory","maximumWorkgroupSize") );
 	});
 
 	var bestDevicePlatform = [];
-	possiblePlatforms.forEach(function(el) { 
-		if(el.platformDevices.length > 0) { 
-			bestDevicePlatform.push(el.platformDevices[0]); 
-		} 
+	possiblePlatforms.forEach(function(el) {
+		if(el.platformDevices.length > 0) {
+			bestDevicePlatform.push(el.platformDevices[0]);
+		}
 	});
 	bestDevicePlatform.sort( dynamicSortMultiple("coreUnits","globalMemory","maximumWorkgroupSize") );
 
@@ -185,8 +185,8 @@ DeviceSelector.selectBestGraphicPlatform = function() {
 		throw new Error("Not enough devices.");
 	}
 
-	possiblePlatforms.forEach(function(el) { 
-		el.platformDevices.sort( dynamicSortMultiple("coreUnits","globalMemory","maximumWorkgroupSize") ); 
+	possiblePlatforms.forEach(function(el) {
+		el.platformDevices.sort( dynamicSortMultiple("coreUnits","globalMemory","maximumWorkgroupSize") );
 	});
 
 	var platformSummary = [];
@@ -194,7 +194,7 @@ DeviceSelector.selectBestGraphicPlatform = function() {
 	possiblePlatforms.forEach(function(currPlatform) {
 		// Create a fake device that is the weighted sum of all devices for that platform
 		var totalDevices = currPlatform.platformDevices.length;
-		var summaryDevice = new WebCLDevice();
+		var summaryDevice = new WCLDevice();
 
 		summaryDevice.platformId = -1;
 		summaryDevice.coreUnits = 0;
@@ -346,15 +346,15 @@ function WCLWrapContext() {
 			throw new Error("A context is already in use. Release it before genereating a new one.");
 		}
 
-		if (!(platformObject instanceof WebCLPlatform)) {
-			throw new Error("platformObject must be an instance of WebCLPlatform");
+		if (!(platformObject instanceof WCLPlatform)) {
+			throw new Error("platformObject must be an instance of WCLPlatform");
 		}
 
 		if ( Object.prototype.toString.call( deviceLists ) !== '[object Array]' ) {
-			throw new Error("deviceLists must be an array of WebCLDevice");
+			throw new Error("deviceLists must be an array of WCLDevice");
 		}
 
-		if ( ( deviceLists.length === 0) || ( deviceLists.every(function(el){ return (el instanceof WebCLDevice); }) ) ) {
+		if ( ( deviceLists.length === 0) || ( deviceLists.every(function(el){ return (el instanceof WCLDevice); }) ) ) {
 			throw new Error("deviceLists must be an array of WebCLDevice and longer than 0");
 		}
 
