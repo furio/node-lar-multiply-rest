@@ -93,7 +93,7 @@ DeviceSelector.fetchGraphicDevicesWithMoreWorkDimension = function() {
 	return returnPlatforms;
 };
 
-DeviceSelector.selectBestGraphicDevice = function() {
+DeviceSelector.fetchSortedGraphicDevicesWithMoreWorkDimension = function() {
 	var possiblePlatforms = this.fetchGraphicDevicesWithMoreWorkDimension();
 
 	if ( !possiblePlatforms.some(function(el) { return (el.platformDevices.length > 0); }) ) {
@@ -103,6 +103,12 @@ DeviceSelector.selectBestGraphicDevice = function() {
 	possiblePlatforms.forEach(function(el) {
 		el.platformDevices.sort( utils.dynamicSortMultiple("coreUnits","globalMemory","maximumWorkgroupSize") );
 	});
+
+	return possiblePlatforms;
+};
+
+DeviceSelector.selectBestGraphicDevice = function() {
+	var possiblePlatforms = this.fetchSortedGraphicDevicesWithMoreWorkDimension();
 
 	var bestDevicePlatform = [];
 	possiblePlatforms.forEach(function(el) {
@@ -116,15 +122,7 @@ DeviceSelector.selectBestGraphicDevice = function() {
 };
 
 DeviceSelector.selectBestGraphicPlatform = function() {
-	var possiblePlatforms = this.fetchGraphicDevicesWithMoreWorkDimension();
-
-	if ( !possiblePlatforms.some(function(el) { return (el.platformDevices.length > 0); }) ) {
-		throw new Error("Not enough devices.");
-	}
-
-	possiblePlatforms.forEach(function(el) {
-		el.platformDevices.sort( utils.dynamicSortMultiple("coreUnits","globalMemory","maximumWorkgroupSize") );
-	});
+	var possiblePlatforms = this.fetchSortedGraphicDevicesWithMoreWorkDimension();
 
 	var platformSummary = [];
 

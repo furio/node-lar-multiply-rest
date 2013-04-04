@@ -1,7 +1,6 @@
 var WebCL = require('node-webcl'),
-	basicWrap = require("./basicClass"),
+	basicClasses = require("./basicClass"),
 	deviceSelector = require("./deviceSelector"),
-	fs = require('fs'),
 	log = require("./logging.js").log;
 
 var WCLWrapContext =
@@ -25,25 +24,27 @@ exports.WCLWrapContext = function() {
 
 	// Buffers
 	var m_buffersObject = {};
-	var mf_getBufferName = function(bufferName) {
-		var m_prependBufferName = "BUF_";
-		return m_prependBufferName+bufferName;
-	};
 
-	this.createBuffer = function(name, length, destTypeLength, destAccess) {
-		var bufName = mf_getBufferName(name);
-
+	this.existBuffer = function(bufName) {
 		if ( this.getCurrentContext() === null ) {
 			throw new Error("No context has been initialized.");
 		}
 
-		if ( m_buffersObject.hasOwnProperty(bufName) ) {
+		return m_buffersObject.hasOwnProperty(bufName);
+	};
+
+	this.createBuffer = function(bufName, length, destTypeLength, destAccess) {
+		if ( this.getCurrentContext() === null ) {
+			throw new Error("No context has been initialized.");
+		}
+
+		if ( this.existBuffer(bufName) ) {
 			throw new Error("A buffer already exist with this name");
 		}
 
-		if (!( (destAccess !== basicWrap.WCLWrapMemoryAccess.READ_ONLY) ||
-				(destAccess !== basicWrap.WCLWrapMemoryAccess.WRITE_ONLY) ||
-				(destAccess !== basicWrap.WCLWrapMemoryAccess.READ_WRITE) )) {
+		if (!( (destAccess !== basicClasses.WCLWrapMemoryAccess.READ_ONLY) ||
+				(destAccess !== basicClasses.WCLWrapMemoryAccess.WRITE_ONLY) ||
+				(destAccess !== basicClasses.WCLWrapMemoryAccess.READ_WRITE) )) {
 
 			throw new Error("Unknown access type");
 		}
@@ -63,14 +64,12 @@ exports.WCLWrapContext = function() {
 		return ( returnedBuffer !== null );
 	};
 
-	this.deleteBuffer = function(name) {
-		var bufName = mf_getBufferName(name);
-
+	this.deleteBuffer = function(bufName) {
 		if ( this.getCurrentContext() === null ) {
 			throw new Error("No context has been initialized.");
 		}
 
-		if ( !m_buffersObject.hasOwnProperty(bufName) ) {
+		if ( !this.existBuffer(bufName) ) {
 			return true;
 		}
 
@@ -84,14 +83,12 @@ exports.WCLWrapContext = function() {
 		return true;
 	};
 
-	this.getBuffer = function(name) {
-		var bufName = mf_getBufferName(name);
-
+	this.getBuffer = function(bufName) {
 		if ( this.getCurrentContext() === null ) {
 			throw new Error("No context has been initialized.");
 		}
 
-		if ( !m_buffersObject.hasOwnProperty(bufName) ) {
+		if ( !this.existBuffer(bufName) ) {
 			throw new Error("No such buffer exist.");
 		}
 
@@ -99,18 +96,36 @@ exports.WCLWrapContext = function() {
 		return m_buffersObject[bufName].buffer;
 	};
 
-	this.giveBuffer = function(name) {
-		var bufName = mf_getBufferName(name);
+	this.giveBuffer = function(bufName) {
+		if ( this.getCurrentContext() === null ) {
+			throw new Error("No context has been initialized.");
+		}
+
+		if ( !this.existBuffer(bufName) ) {
+			throw new Error("No such buffer exist.");
+		}
+
+		if ( m_buffersObject[bufName].inuse === 0 ) {
+			return false;
+		}
+
+		m_buffersObject[bufName].inuse -= 1;
+		return true;
+	};
+
+	this.flushBuffers = function(force) {
+		force = force || false;
 
 		if ( this.getCurrentContext() === null ) {
 			throw new Error("No context has been initialized.");
 		}
 
-		if ( !m_buffersObject.hasOwnProperty(bufName) ) {
-			throw new Error("No such buffer exist.");
+		for (var key in m_buffersObject) {
+			if (this.deleteBuffer(key) !== true && force === true) {
+				while( !this.giveBuffer(key) ) {}
+				this.deleteBuffer(key);
+			}
 		}
-
-		m_buffersObject[bufName].inuse -= 1;
 	};
 
 	// * //
@@ -120,7 +135,7 @@ exports.WCLWrapContext = function() {
 			throw new Error("A context is already in use. Release it before genereating a new one.");
 		}
 
-		if (!(platformObject instanceof basicWrap.WCLPlatform)) {
+		if (!(platformObject instanceof basicClasses.WCLPlatform)) {
 			throw new Error("platformObject must be an instance of WCLPlatform");
 		}
 
@@ -128,7 +143,7 @@ exports.WCLWrapContext = function() {
 			throw new Error("deviceLists must be an array of WCLDevice");
 		}
 
-		if ( ( deviceLists.length === 0) || ( deviceLists.every(function(el){ return (el instanceof basicWrap.WCLDevice); }) ) ) {
+		if ( ( deviceLists.length === 0) || ( deviceLists.every(function(el){ return (el instanceof basicClasses.WCLDevice); }) ) ) {
 			throw new Error("deviceLists must be an array of WebCLDevice and longer than 0");
 		}
 
@@ -162,8 +177,9 @@ exports.WCLWrapContext = function() {
 		}
 	};
 
-	this.releaseContext = function() {
+	this.releaseContext = function(force) {
 		if ( this.getCurrentContext() !== null ) {
+			this.flushBuffers(force);
 			this.getCurrentContext().release();
 			m_currentContext = null;
 		}
@@ -222,6 +238,11 @@ exports.WCLWrapKernel = function (kernelName, contextWrapper) {
 	var m_kernelContent = null;
 	var m_kernelReplaces = {};
 	var m_kernelDefines = {};
+	var m_kernelArguments = [];
+	var m_kernelImpl = {
+		"program" : null,
+		"kernel" : null
+	};
 
 	this.getKernelName = function() {
 		return m_kernelName;
@@ -240,7 +261,7 @@ exports.WCLWrapKernel = function (kernelName, contextWrapper) {
 	};
 
 	this.loadKernelFromFile = function(filePath) {
-		m_kernelContent = fs.readFileSync(filePath, 'ascii');
+		m_kernelContent = basicClasses.FileReader.readFileAscii(filePath);
 	};
 
 	this.loadKernelFromString = function(kernelString) {
@@ -261,9 +282,25 @@ exports.WCLWrapKernel = function (kernelName, contextWrapper) {
 		m_kernelDefines[key] = value;
 	};
 
-	this.describeKernelVars = function(position, buffNameOrlocalSize) {
+	this.describeKernelArgs = function(position, buffName) {
+		if ( isNaN(position) || (position < 0) ) {
+			throw new Error("Wrong positional index");
+		}
 
+		if ( m_contextWrap.existBuffer(buffName) ) {
+			throw new Error("No such buffer name");
+		}
+
+		if ( m_kernelArguments[position] !== null ) {
+			throw new Error("Position already in use!");
+		}
+
+		m_kernelArguments[position] = buffName;
 	};
+
+	this.describeKernelLocalArgs = function(position, localSize) {
+		throw new Error("Not implemented");
+	};	
 };
 
 WCLWrapKernel.prototype.createClKernel = function(argObjList) {

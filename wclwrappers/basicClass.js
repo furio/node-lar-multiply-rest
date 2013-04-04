@@ -1,4 +1,5 @@
-var WebCL = require('node-webcl');
+var WebCL = require('node-webcl'),
+	fs = require('fs');
 
 var WCLPlatform =
 exports.WCLPlatform = function() {
@@ -42,3 +43,15 @@ exports.WCLWrapMemoryAccess = (function(){
 	Object.defineProperty(oReturn, "READ_WRITE", {enumerable: true, value : WebCL.MEM_READ_WRITE});
 	return oReturn;
 })();
+
+var FileReader =
+exports.FileReader = {};
+FileReader.readFileAscii = function(filePath) {
+	return this.readFile(filePath, 'ascii');
+};
+FileReader.readFileUTF8 = function(filePath) {
+	return this.readFile(filePath, 'utf8');
+};
+FileReader.readFile = function(filePath, encoding) {
+	return fs.readFileSync(filePath, encoding);
+};
