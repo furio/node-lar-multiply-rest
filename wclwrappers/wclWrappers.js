@@ -219,6 +219,17 @@ WCLWrapContext.prototype.generateBestGraphicContext = function(multipleDevices) 
 
 // ********************** //
 
+var WCLWrapProgram =
+exports.WCLWrapProgram = function (kernelSource) {
+
+
+	this.build = function(contextWrapper) {
+
+	};
+};
+
+// ********************** //
+
 var WCLWrapKernel =
 exports.WCLWrapKernel = function (kernelName, contextWrapper) {
 	if (!((typeof(kernelName) == "string") && (kernelName.length > 0))) {
@@ -300,37 +311,38 @@ exports.WCLWrapKernel = function (kernelName, contextWrapper) {
 
 	this.describeKernelLocalArgs = function(position, localSize) {
 		throw new Error("Not implemented");
-	};	
-};
+	};
 
-WCLWrapKernel.prototype.createClKernel = function(argObjList) {
-	var kernelOut = null, program = null;
-	argObjList = argObjList || [];
+	this.setupKernel = function() {
+		/*
+		if (m_kernelContent === null) {
+			throw new Error("Cannot build a kernel on an empty source");
+		}
 
-	if (this.kernelString === null) {
-		throw new Error("Cannot build a kernel on an empty source");
-	}
+		try {
+			// need a wrapper for program ?!?!
+			m_kernelImpl.program = this.getContextWrap().getCurrentContext().createProgram(m_kernelContent);
+		} catch(err) {
+			m_kernelImpl.program = null;
+			throw new Error("Problem while building kernel.");
+		}
 
-	try {
-		program = this.contextWrap.getCurrentContext().createProgram(this.kernelString);
-	} catch(err) {
-		program = null;
-		throw new Error("Problem while building kernel.");
-	}
+		try {
+			// here too
+			program.build(this.getContextWrap().getCurrentDevices());
+			kernelOut = program.createKernel(this.kernelName);
+		} catch(err) {
+			kernelOut = null;
+			throw new Error("Problem while building and creating kernel.\n");
+		}
 
-	try {
-		program.build(this.contextWrap.getCurrentDevices());
-		kernelOut = program.createKernel(this.kernelName);
-	} catch(err) {
-		kernelOut = null;
-		throw new Error("Problem while building and creating kernel.\n");
-	}
+		if (argObjList.length > 0) {
+			argObjList.forEach(function(el,idx) {
+				kernelOut.setArg(idx, el);
+			});
+		}
 
-	if (argObjList.length > 0) {
-		argObjList.forEach(function(el,idx) {
-			kernelOut.setArg(idx, el);
-		});
-	}
-
-	return kernelOut;
+		return kernelOut;
+		*/
+	};
 };
