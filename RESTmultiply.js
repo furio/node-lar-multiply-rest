@@ -153,6 +153,7 @@ var childServer = function(isCluster) {
 
 	app.all('/service/:key/*', function(req, res, next) {
 		if ( g_apikey.isValidKey( req.params.key ) ) {
+			log.info("Key " + req.params.key + " is valid.");
 			next();
 		} else {
 			res.send(401);
