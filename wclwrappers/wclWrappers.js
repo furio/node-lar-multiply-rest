@@ -18,41 +18,39 @@ exports.WCLWrapContext = function() {
 		return m_currentDevices;
 	};
 
-	this.getCurrentContext = function() {
-		return m_currentContext;
+	var mf_isValidIstance = function() {
+		if ( m_currentContext === null ) {
+			throw new Error("No context has been initialized.");
+		}
 	};
 
 	// Buffers
 	var m_buffersObject = {};
 
 	this.existBuffer = function(bufName) {
-		if ( this.getCurrentContext() === null ) {
-			throw new Error("No context has been initialized.");
-		}
+		mf_isValidIstance();
 
 		return m_buffersObject.hasOwnProperty(bufName);
 	};
 
-	this.createBuffer = function(bufName, length, destTypeLength, destAccess) {
-		if ( this.getCurrentContext() === null ) {
-			throw new Error("No context has been initialized.");
-		}
+	var mf_createBuffer = function(bufName, length, destTypeLength, destAccess) {
+		mf_isValidIstance();
 
 		if ( this.existBuffer(bufName) ) {
 			throw new Error("A buffer already exist with this name");
 		}
 
-		if (!( (destAccess !== basicClasses.WCLWrapMemoryAccess.READ_ONLY) ||
-				(destAccess !== basicClasses.WCLWrapMemoryAccess.WRITE_ONLY) ||
-				(destAccess !== basicClasses.WCLWrapMemoryAccess.READ_WRITE) )) {
-
-			throw new Error("Unknown access type");
-		}
+//		if (!( (destAccess !== basicClasses.WCLWrapMemoryAccess.READ_ONLY) ||
+//				(destAccess !== basicClasses.WCLWrapMemoryAccess.WRITE_ONLY) ||
+//				(destAccess !== basicClasses.WCLWrapMemoryAccess.READ_WRITE) )) {
+//
+//			throw new Error("Unknown access type");
+//		}
 
 		var returnedBuffer = null;
 
 		try {
-			returnedBuffer = this.getCurrentContext().createBuffer(destAccess, length * destTypeLength);
+			returnedBuffer = m_currentContext.createBuffer(destAccess, length * destTypeLength);
 		} catch(err) {
 			returnedBuffer = null;
 		}
@@ -64,10 +62,20 @@ exports.WCLWrapContext = function() {
 		return ( returnedBuffer !== null );
 	};
 
+	this.createReadOnlyBuffer = function(bufName, length, destTypeLength) {
+		return mf_createBuffer(bufName, length, destTypeLength, basicClasses.WCLWrapMemoryAccess.READ_ONLY);
+	};
+
+	this.createWriteOnlyBuffer = function(bufName, length, destTypeLength) {
+		return mf_createBuffer(bufName, length, destTypeLength, basicClasses.WCLWrapMemoryAccess.WRITE_ONLY);
+	};
+
+	this.createReadWriteBuffer = function(bufName, length, destTypeLength) {
+		return mf_createBuffer(bufName, length, destTypeLength, basicClasses.WCLWrapMemoryAccess.READ_WRITE);
+	};
+
 	this.deleteBuffer = function(bufName) {
-		if ( this.getCurrentContext() === null ) {
-			throw new Error("No context has been initialized.");
-		}
+		mf_isValidIstance();
 
 		if ( !this.existBuffer(bufName) ) {
 			return true;
@@ -84,9 +92,7 @@ exports.WCLWrapContext = function() {
 	};
 
 	this.getBuffer = function(bufName) {
-		if ( this.getCurrentContext() === null ) {
-			throw new Error("No context has been initialized.");
-		}
+		mf_isValidIstance();
 
 		if ( !this.existBuffer(bufName) ) {
 			throw new Error("No such buffer exist.");
@@ -97,9 +103,7 @@ exports.WCLWrapContext = function() {
 	};
 
 	this.giveBuffer = function(bufName) {
-		if ( this.getCurrentContext() === null ) {
-			throw new Error("No context has been initialized.");
-		}
+		mf_isValidIstance();
 
 		if ( !this.existBuffer(bufName) ) {
 			throw new Error("No such buffer exist.");
@@ -116,9 +120,7 @@ exports.WCLWrapContext = function() {
 	this.flushBuffers = function(force) {
 		force = force || false;
 
-		if ( this.getCurrentContext() === null ) {
-			throw new Error("No context has been initialized.");
-		}
+		mf_isValidIstance();
 
 		for (var key in m_buffersObject) {
 			if (this.deleteBuffer(key) !== true && force === true) {
@@ -130,10 +132,8 @@ exports.WCLWrapContext = function() {
 
 	// * //
 
-	this.generateContext = function(platformObject, deviceLists) {
-		if ( this.getCurrentContext() !== null ) {
-			throw new Error("A context is already in use. Release it before genereating a new one.");
-		}
+	var mf_generateContext = function(platformObject, deviceLists) {
+		mf_isValidIstance();
 
 		if (!(platformObject instanceof basicClasses.WCLPlatform)) {
 			throw new Error("platformObject must be an instance of WCLPlatform");
@@ -178,53 +178,92 @@ exports.WCLWrapContext = function() {
 	};
 
 	this.releaseContext = function(force) {
-		if ( this.getCurrentContext() !== null ) {
+		if ( m_currentContext !== null ) {
 			this.flushBuffers(force);
-			this.getCurrentContext().release();
+			m_currentContext.release();
 			m_currentContext = null;
 		}
 	};
-};
 
+	this.generateBestGraphicContext = function(multipleDevices) {
+		multipleDevices = multipleDevices || false;
 
-WCLWrapContext.prototype.generateBestGraphicContext = function(multipleDevices) {
-	multipleDevices = multipleDevices || false;
+		// No if we already have an instance
+		if ( m_currentContext !== null ) {
+			throw new Error("No context has been initialized.");
+		}
 
-	// No if we already have an instance
-	if ( this.getCurrentContext() !== null ) {
-		throw new Error("A context is already in use. Release it before genereating a new one.");
-	}
+		var usableDevices = null;
 
-	var usableDevices = null;
+		try {
+			usableDevices = (multipleDevices === true) ?
+									deviceSelector.DeviceSelector.selectBestGraphicPlatform()
+								:
+									deviceSelector.DeviceSelector.selectBestGraphicDevice();
+		} catch (err) {
+			throw Error("Error while selecting devices/platforms: " + err.toString());
+		}
 
-	try {
-		usableDevices = (multipleDevices === true) ?
-								deviceSelector.DeviceSelector.selectBestGraphicPlatform()
-							:
-								deviceSelector.DeviceSelector.selectBestGraphicDevice();
-	} catch (err) {
-		throw Error("Error while selecting devices/platforms: " + err.toString());
-	}
+		if (usableDevices.length === 0) {
+			throw Error("Error while selecting devices/platforms: nothing found");
+		}
 
-	if (usableDevices.length === 0) {
-		throw Error("Error while selecting devices/platforms: nothing found");
-	}
+		// By specification we can have only a context on a platform and not across platforms
+		var platformObj = usableDevices[0].platform;
 
-	// By specification we can have only a context on a platform and not across platforms
-	var platformObj = usableDevices[0].platform;
+		// Generate context
+		mf_generateContext(platformObj, usableDevices);
+	};
 
-	// Generate context
-	this.generateContext(platformObj, usableDevices);
+	this.buildProgram = function(source) {
+		mf_isValidIstance();
+
+		return new WCLWrapProgram(m_currentContext.createProgram(source));
+	};
 };
 
 // ********************** //
 
 var WCLWrapProgram =
-exports.WCLWrapProgram = function (kernelSource) {
+exports.WCLWrapProgram = function (programPtr) {
+	var m_programPtr = programPtr;
 
+	var mf_buildReady = function() {
+		if ( m_programPtr === null ) {
+			throw new Error("Build is not ready");
+		}
+	};
 
-	this.build = function(contextWrapper) {
+	this.build = function(contextWrapper, defines) {
+		mf_buildReady();
 
+		try {
+			m_programPtr.build(contextWrapper.getCurrentDevices(), defines);
+		} catch(err) {
+			this.release();
+			throw new Error(err);
+		}
+	};
+
+	this.kernelImpl = function(name) {
+		mf_buildReady();
+
+		var kernelImpl = null;
+
+		try {
+			kernelImpl = m_programPtr.createKernel(name);
+		} catch(err) {
+			kernelImpl = null;
+		}
+
+		return kernelImpl;
+	};
+
+	this.release = function() {
+		if ( m_programPtr !== null ) {
+			m_programPtr.release();
+			m_programPtr = null;
+		}
 	};
 };
 
@@ -240,20 +279,16 @@ exports.WCLWrapKernel = function (kernelName, contextWrapper) {
 		throw new Error("Need a WCLWrapContext");
 	}
 
-	if (contextWrapper.getCurrentContext() === null) {
-		throw new Error("Need a WCLWrapContext with a live context enabled");
-	}
-
 	var m_kernelName = kernelName;
 	var m_contextWrap = contextWrapper;
+	//
 	var m_kernelContent = null;
 	var m_kernelReplaces = {};
 	var m_kernelDefines = {};
 	var m_kernelArguments = [];
-	var m_kernelImpl = {
-		"program" : null,
-		"kernel" : null
-	};
+	//
+	var m_programWrap = null;
+	var m_kernelImpl = null;
 
 	this.getKernelName = function() {
 		return m_kernelName;
@@ -286,6 +321,14 @@ exports.WCLWrapKernel = function (kernelName, contextWrapper) {
 		m_kernelReplaces[key] = value;
 	};
 
+	var mf_doKernelReplace = function() {
+		var replacedString = m_kernelContent;
+		for(var key in m_kernelReplaces) {
+			replacedString.replace(key, m_kernelReplaces[key]);
+		}
+		return replacedString;
+	};
+
 	this.addKernelDefine = function(key,value) {
 		if ( m_kernelDefines.hasOwnProperty(key) ) {
 			log.silly("key already exist in m_kernelDefines");
@@ -313,36 +356,43 @@ exports.WCLWrapKernel = function (kernelName, contextWrapper) {
 		throw new Error("Not implemented");
 	};
 
+	var mf_prepareProgram = function(kernelString, definesMap) {
+		var programInstance = null;
+
+		try {
+			programInstance = this.getContextWrap().buildProgram(kernelString);
+			programInstance.build(this.getContextWrap(), definesMap);
+		} catch(err) {
+			programInstance = null;
+		}
+
+		return programInstance;
+	};
+
 	this.setupKernel = function() {
-		/*
 		if (m_kernelContent === null) {
 			throw new Error("Cannot build a kernel on an empty source");
 		}
 
-		try {
-			// need a wrapper for program ?!?!
-			m_kernelImpl.program = this.getContextWrap().getCurrentContext().createProgram(m_kernelContent);
-		} catch(err) {
-			m_kernelImpl.program = null;
-			throw new Error("Problem while building kernel.");
+		// The replace for defines
+		var replacedKernel = mf_doKernelReplace();
+		var definesMap = "";
+		var programReturn = mf_prepareProgram(replacedKernel, definesMap);
+
+		if ( programReturn === null ) {
+			throw new Error("Cannot setup a WCLProgram");
 		}
 
-		try {
-			// here too
-			program.build(this.getContextWrap().getCurrentDevices());
-			kernelOut = program.createKernel(this.kernelName);
-		} catch(err) {
-			kernelOut = null;
-			throw new Error("Problem while building and creating kernel.\n");
-		}
+		// kernel = program.createKernel("kernel_name");
 
+		/*
 		if (argObjList.length > 0) {
 			argObjList.forEach(function(el,idx) {
 				kernelOut.setArg(idx, el);
 			});
 		}
 
-		return kernelOut;
+		m_programWrap = programReturn;
 		*/
 	};
 };
