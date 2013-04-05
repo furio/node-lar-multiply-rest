@@ -133,7 +133,8 @@ exports.WCLWrapContext = function() {
 	// * //
 
 	var mf_generateContext = function(platformObject, deviceLists) {
-		mf_isValidIstance();
+		// Nope! the opposite !== null
+		// mf_isValidIstance();
 
 		if (!(platformObject instanceof basicClasses.WCLPlatform)) {
 			throw new Error("platformObject must be an instance of WCLPlatform");
@@ -197,9 +198,9 @@ exports.WCLWrapContext = function() {
 
 		try {
 			usableDevices = (multipleDevices === true) ?
-									deviceSelector.DeviceSelector.selectBestGraphicPlatform()
+								deviceSelector.DeviceSelector.selectBestGraphicPlatform()
 								:
-									deviceSelector.DeviceSelector.selectBestGraphicDevice();
+								deviceSelector.DeviceSelector.selectBestGraphicDevice();
 		} catch (err) {
 			throw Error("Error while selecting devices/platforms: " + err.toString());
 		}
