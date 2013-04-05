@@ -237,6 +237,7 @@ var f_multiplyMatrix = function(matA, matBx) {
 		}
 
 		// Create buffer for C to read results
+		log.info("Trying to allocate " + (matA.getRowCount()*matBx.getColCount()) + " elements of " + Float32Array.BYTES_PER_ELEMENT + "size, for matrix result.");
 		denseResult = context.createBuffer(WebCL.MEM_WRITE_ONLY, (matA.getRowCount()*matBx.getColCount())*Float32Array.BYTES_PER_ELEMENT);
 		f_clObject_add(denseResult, clObjects);
 	} catch(err) {
