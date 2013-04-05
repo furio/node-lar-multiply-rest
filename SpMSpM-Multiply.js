@@ -325,6 +325,7 @@ var f_multiplyMatrix = function(matA, matBx) {
 		// Execute (enqueue) kernel
 		queue.enqueueNDRangeKernel(kernel, globalOff, globalWS, localWS);
 
+		log.info("Trying to allocate " + (matA.getRowCount()*matBx.getColCount()) + " elements of " + Float32Array.BYTES_PER_ELEMENT + "size, for matrix result.");
 		MATRIX_RES = new Float32Array( matA.getRowCount()*matBx.getColCount() );
 		queue.enqueueReadBuffer(denseResult, true, 0, MATRIX_RES.length*Float32Array.BYTES_PER_ELEMENT, MATRIX_RES);
 
