@@ -30,16 +30,16 @@ var Math_floor = Math.floor;
 
 var WebCLArrayContainer =
 exports.WebCLArrayContainer = function(typedArray, arrayLen) {
-	if ( !typedArray.hasOwnProperty("BYTES_PER_ELEMENT") ) {
-		throw new Error("Not a typed array");
-	}
-
-	if (arguments.length == 1) {
-		throw new Error("Not a valid length");
-	} else if (arguments.length == 2) {
+	if (arguments.length == 2) {
 		if ( isNaN(arrayLen) || ( arrayLen <= 0 ) ) {
 			throw new Error("Not a valid length");
 		}
+	} else {
+		throw new Error("Not valid arguments");
+	}
+
+	if ( !typedArray.hasOwnProperty("BYTES_PER_ELEMENT") ) {
+		throw new Error("Not a typed array");
 	}
 
 	//
