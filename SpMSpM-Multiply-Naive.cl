@@ -2,6 +2,7 @@
 #define MAXROW %%AROW%%
 #define MAXCOL %%BCOL%%
 
+//
 __kernel void spmm_kernel_naive(
 	__global const uint * restrict ArowPtr, __global const uint * restrict Acols,
 	__global const float * restrict Adata,
