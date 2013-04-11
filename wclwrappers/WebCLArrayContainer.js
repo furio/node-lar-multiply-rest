@@ -19,7 +19,7 @@ WebCLArrayContainer(typedArray, length)
 */
 
 var WebCL = require('node-webcl'),
-	log = require("./logging.js").log;
+	log = require("../logging.js").log;
 
 // STATIC LENGTH
 var V8ArrayBufferMaxLength = 0x3fffffff;
@@ -47,28 +47,32 @@ exports.WebCLArrayContainer = function(typedArray, arrayLen) {
 	var m_arrayLen = arrayLen;
 	var m_container = [];
 
+	var mf_getEngineMaxByteLength = 
 	this.getEngineMaxByteLength = function() {
 		return V8ArrayBufferMaxLength;
 	};
 
+	var mf_getTypedArrayLength = 
 	this.getTypedArrayLength = function() {
 		return m_typedArray.BYTES_PER_ELEMENT;
 	};
 
+	var mf_getMaxElements = 
 	this.getMaxElements = function() {
-		return Math_floor( this.getEngineMaxByteLength() / this.getTypedArrayLength() );
+		return Math_floor( mf_getEngineMaxByteLength() / mf_getTypedArrayLength() );
 	};
 
+	var mf_ArrayLength = 
 	this.getArrayLength = function() {
 		return m_arrayLen;
 	};
 
 	var mf_getContainerPosition = function(pos) {
-		return Math_floor( pos / this.getMaxElements() );
+		return Math_floor( pos / mf_getMaxElements() );
 	};
 
 	var mf_getInsidePosition = function(pos) {
-		return ( pos % this.getMaxElements() );
+		return ( pos % mf_getMaxElements() );
 	};
 
 	this.get = function(pos) {
@@ -90,9 +94,9 @@ exports.WebCLArrayContainer = function(typedArray, arrayLen) {
 	};
 
 	var mf_Init = function() {
-		var howMany = Math_ceil( this.getArrayLength() / this.getMaxElements() );
+		var howMany = Math_ceil( mf_ArrayLength() / mf_getMaxElements() );
 		for(var i = 0; i < howMany; i++) {
-			m_container[i] = new m_typedArray( this.getMaxElements() );
+			m_container[i] = new m_typedArray( mf_getMaxElements() );
 		}
 	};
 
@@ -140,8 +144,9 @@ exports.WebCLArrayContainer = function(typedArray, arrayLen) {
 	this.toJsArray = function() {
 		var retArray = [];
 
-		for(var i = 0; i < m_container.length; i++) {
-			retArray.concat( Array.prototype.slice.call( m_container[i] ) );
+		// TODO: horrible, let use some rebuilding and constructors and let node sort it for us
+		for(var i = 0; i < this.getArrayLength(); i++) {
+			retArray.push( this.get(i) );
 		}
 
 		return retArray;
@@ -152,11 +157,13 @@ exports.WebCLArrayContainer = function(typedArray, arrayLen) {
 		if (arr.length != this.getArrayLength()) {
 			throw new Error("Copy operation must be performed on equal length objects");
 		}
-
+		
 		// TODO: horrible, let use some rebuilding and constructors and let node sort it for us
-
+		var thisObj = this;
 		arr.forEach(function(el,idx) {
-			this.set(idx,el);
+			thisObj.set(idx,el);
 		});
+
+		return this;
 	};
 };
