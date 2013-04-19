@@ -22,7 +22,9 @@ var newFilledArray = function(len, val) {
 };
 
 
-// *
+// The CSR format used is the same of scipy.sparse library
+//
+// The values in the getColumnIndices, for every row, are in ascending order;
 
 function csr_matrix(objargs) {
 	// CSR Data
@@ -487,6 +489,71 @@ csr_matrix.prototype.toJSON = function() {
 			"DATA": this.getData(),
 			"ROWCOUNT": this.getRowCount(),
 			"COLCOUNT": this.getColCount()};
+};
+
+// Return a sub-row of the matrix:
+// 
+// [a(i,j) ... a(i,j+length-1)];
+//
+// The first element of the matrix is indicated with a(1,1); 
+//
+// The sub-row is returned in CSR format;
+//
+// The sub-row length is taken from the input parameters, if the specified length is 
+// over the last column of the matrix, the returned sub-row is padded with zeroes
+
+csr_matrix.prototype.getRowPiece = function(i,j,length) {
+
+	if ((i < 1) || (j < 1) || (length < 1)) {
+		throw new Error('Parameters must be > 1');
+	}
+ 
+ if (this.getRowPointer().length < 2) {
+			throw new Error('Matrix is not valid');
+	}
+
+  if (i > this.getRowCount()) {
+		throw new Error('Row index cannot be > RowCount');
+	}
+	
+	if (j > this.getColCount()) {
+		throw new Error('Col index cannot be > ColCount');
+	}
+
+	if (length > (this.getColCount() - j + 1)) {
+		console.log('Warning: out of the bound of the matrix, padded with 0');
+	}
+
+	var tmp_col = [];
+	var tmp_data = [];
+
+	if (this.getNonZeroElementsCount() > 0) {
+	
+		// Matrix is valid so getRowPointer ever has an element in position [i-1]
+
+		var ptr = this.getRowPointer()[i - 1];
+		var end_ptr = this.getRowPointer()[i];
+
+		var column = this.getColumnIndices()[ptr] + 1;
+
+		while ((ptr < end_ptr) && (column < (j + length))) {
+
+  		if (column > (j - 1)) {
+
+  			data = this.getData()[ptr];
+
+  			tmp_col.push(column - j);
+  			tmp_data.push(data);
+  	  }
+
+  	  ptr++;
+  	  var column = this.getColumnIndices()[ptr] + 1;
+  	};
+	};
+
+  ret = new csr_matrix({"numcols": length, "rowptr": [0,length], "colindices": tmp_col, "data": tmp_data});
+
+  return ret;
 };
 
 exports.csr_matrix = csr_matrix;
