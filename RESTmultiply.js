@@ -146,11 +146,19 @@ var childServer = function(isCluster) {
 		};
 	};
 
-    app.get('/', function(req, res) {
+	app.get('/', function(req, res) {
 		var dataOut = 'Service UP.';
 		res.send(dataOut);
 	});
+        
+        app.all('/*', function(req, res, next) {
+		res.header("Access-Control-Allow-Origin", "*");
+		res.header("Access-Control-Allow-Methods", "GET,POST");
+		res.header("Access-Control-Allow-Headers", "X-Requested-With");
 
+		next();
+        });
+        
 	app.all('/service/:key/*', function(req, res, next) {
 		if ( g_apikey.isValidKey( req.params.key ) ) {
 			log.info("Key " + req.params.key + " is valid.");
@@ -177,12 +185,15 @@ var childServer = function(isCluster) {
 					var resultMat = f_multiply_matrices( JSON.parse(matrixA), JSON.parse(matrixB) );
 					callReturnFunction(res)( null, resultMat );
 				} catch(err) {
+					log.info("Wrong POST request: Error while multipling: " + err);
 					callReturnFunction(res)( err );
 				}
 			} else {
+				log.info("Wrong POST request: no matrixa/matrixb");
 				callReturnFunction(res)( app.get('format_error_input') );
 			}
 		} else {
+			log.info("Wrong POST request: no body");
 			callReturnFunction(res)( app.get('format_error') );
 		}
 	});
