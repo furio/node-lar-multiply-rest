@@ -39,7 +39,7 @@ process.argv.forEach(function(val, index, array) {
 		}
 	} else if ( val.startsWith("--key=") ) {
 		var newKey = val.slice("--key=".length);
-		g_apikey.putKey(String(key));
+		g_apikey.putKey(String(newKey));
 	}
 });
 
