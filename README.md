@@ -27,9 +27,14 @@ Start server with `npm run-script run` (with default arguments)
 **OR**
 
 Start server with `./startREST.sh` (*NIX flavour) or `node RESTMultiply.js`. Possible arguments:
-* --webcl (enable WebCL backend) _Default: false_
+* --no-webcl (disable WebCL backend) _Default: false_
 * --cluster (enable cluster). _Default: false_
-* --port=1234 (use port 1234 to serve request). _Default: false_
+* --port=1234 (use port 1234 to serve request). _Default: 3000_
+* --key=dln (use string "dln" as api key for this instance).
+
+## REST Endpoint
+
+The REST endpoint is (with a proper HTTP POST) http://HOST:PORT/service/APIKEY/multiply
 
 ## License
 
