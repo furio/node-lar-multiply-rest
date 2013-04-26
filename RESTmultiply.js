@@ -1,5 +1,5 @@
 var USE_CLUSTER = false;
-var USE_WEBCL = false;
+var USE_WEBCL = true;
 var WEBPORT = 3000;
 
 // Proto libraries
@@ -27,8 +27,8 @@ var loadLateWebCL = function() {
 };
 
 process.argv.forEach(function(val, index, array) {
-	if ( val === "--webcl" ) {
-		USE_WEBCL = true;
+	if ( val === "--no-webcl" ) {
+		USE_WEBCL = false;
 		loadLateWebCL();
 	} else if ( val === "--cluster" ) {
 		USE_CLUSTER = true;
@@ -37,6 +37,9 @@ process.argv.forEach(function(val, index, array) {
 		if ( g_utils.isUnsignedInteger(newPort) && ( newPort < 65535 ) ) {
 			WEBPORT = newPort;
 		}
+	} else if ( val.startsWith("--key=") ) {
+		var newKey = val.slice("--key=".length);
+		g_apikey.putKey(String(newKey));
 	}
 });
 
