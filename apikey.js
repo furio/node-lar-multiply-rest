@@ -1,8 +1,10 @@
 // Set in deploy
-var KEYS = ["",		// Testing key
-			"",		// weblar key
-			""];	// prof key
+var KEYS = [];	// Api keys (STRING)
 
 exports.isValidKey = function(theKey) {
 	return KEYS.some(function(el) { return (el === theKey); });
+};
+
+exports.putKey = function(theKey) {
+	KEYS.push(theKey);
 };
