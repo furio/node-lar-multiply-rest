@@ -495,7 +495,7 @@ csr_matrix.prototype.toJSON = function() {
 // 
 // [a(i,j) ... a(i,j+length-1)];
 //
-// The first element of the matrix is indicated with a(1,1); 
+// The first element of the matrix is indicated with a(0,0); 
 //
 // The sub-row is returned in CSR format;
 //
@@ -504,20 +504,20 @@ csr_matrix.prototype.toJSON = function() {
 
 csr_matrix.prototype.getRowPiece = function(i,j,length) {
 
-	if ((i < 1) || (j < 1) || (length < 1)) {
-		throw new Error('Parameters must be > 1');
+	if  ((i < 0) || (i >= this.getRowCount())) {
+		throw new Error('Row index must be in [0, #row - 1]');
+	}
+
+	if  ((j < 0) || (j >= this.getColCount())) {
+		throw new Error('Col index must be in [0, #col - 1]');
+	}
+
+	if (length <= 0) {
+		throw new Error('Length must be > 0');
 	}
 
     if (this.getRowPointer().length < 2) {
 		throw new Error('Matrix is not valid');
-	}
-
-	if (i > this.getRowCount()) {
-		throw new Error('Row index cannot be > RowCount');
-	}
-
-	if (j > this.getColCount()) {
-		throw new Error('Col index cannot be > ColCount');
 	}
 
 	if (length > (this.getColCount() - j + 1)) {
@@ -526,30 +526,37 @@ csr_matrix.prototype.getRowPiece = function(i,j,length) {
 
 	var tmp_col = [];
 	var tmp_data = [];
+	var tmp_row = [0];
 
 	if (this.getNonZeroElementsCount() > 0) {
 
-		// Matrix is valid so getRowPointer ever has an element in position [i-1]
+		// Matrix is valid so getRowPointer ever has an element in position [i + 1]
 
-		var ptr = this.getRowPointer()[i - 1];
-		var end_ptr = this.getRowPointer()[i];
+		var ptr = this.getRowPointer()[i];
+		var end_ptr = this.getRowPointer()[i + 1];
 
-		var column = this.getColumnIndices()[ptr] + 1;
+		var column = this.getColumnIndices()[ptr];
+		var end_column = j + length;
 
-		while ((ptr < end_ptr) && (column < (j + length))) {
+		while ((ptr < end_ptr) && (column < end_column)) {
 
-			if (column > (j - 1)) {
+			if (column >= j) {
 
 				tmp_col.push(column - j);
 				tmp_data.push(this.getData()[ptr]);
 			}
 
 			ptr++;
-			column = this.getColumnIndices()[ptr] + 1;
+
+			if (ptr < end_ptr) {
+				column = this.getColumnIndices()[ptr];
+			}
 		}
 	}
 
-	return new csr_matrix({"numcols": length, "rowptr": [0,length], "colindices": tmp_col, "data": tmp_data});
+	tmp_row.push(tmp_col.length);
+
+	return new csr_matrix({"numcols": length, "rowptr": tmp_row, "colindices": tmp_col, "data": tmp_data});
 };
 
 exports.csr_matrix = csr_matrix;
