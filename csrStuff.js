@@ -245,7 +245,7 @@ csr_matrix.prototype.loadData = function(objargs) {
 
 		var columnData = {};
 		var cooArray = objargs.fromcoo;
-		int nnzCount = cooArray / 3;
+		var nnzCount = cooArray / 3;
 
 		for(var i = 0; i < nnz; i++) {
 			currRow = Math.ceil( cooArray[i*3 + 0] );
