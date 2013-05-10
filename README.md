@@ -34,7 +34,15 @@ Start server with `./startREST.sh` (*NIX flavour) or `node RESTMultiply.js`. Pos
 
 ## REST Endpoint
 
-The REST endpoint is (with a proper HTTP POST) http://HOST:PORT/service/APIKEY/multiply
+The REST endpoint is (with a proper HTTP POST) 
+
+* http://HOST:PORT/service/APIKEY/multiply
+
+*or*
+
+* http://HOST:PORT/service/APIKEY/multiplyCOO
+
+The latter has the effect of using a OpenCL kernel that performs CSR*CSR = COO. (Untested)
 
 ## License
 
