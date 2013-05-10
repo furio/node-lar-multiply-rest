@@ -554,7 +554,7 @@ var f_multiplyMatrixCOO = function(matA, matBx) {
 	// Hope
 	f_clObject_clear(clObjects);
 
-	return {"fromcoo": MATRIX_RES, "numcols": matBx.getColCount()};
+	return {"fromcoo": MATRIX_RES, "numrows": matA.getRowCount(), "numcols": matBx.getColCount()};
 };
 
 var f_commonStartup = function(matA, matBx, fromCOO) {
@@ -566,5 +566,7 @@ var f_commonStartup = function(matA, matBx, fromCOO) {
 };
 
 exports.multiplyMatrix = function(matA, matBx, fromCOO) {
-	return f_commonStartup(matA, matBx, false);
+	fromCOO = fromCOO || false;
+
+	return f_commonStartup(matA, matBx, fromCOO);
 };

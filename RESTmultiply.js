@@ -184,8 +184,7 @@ var childServer = function(isCluster) {
 
 	app.post('/service/:key/multiplyCOO', function(req,res){
 		log.info("POST /service/:key/multiplyCOO");
-		// TODO: This is disabled.
-		f_multiply_matrices_response(req,res,false);
+		f_multiply_matrices_response(req,res,true);
 	});	
 
 	var f_multiply_matrices_response = function(req,res,fromCOO) {

@@ -21,6 +21,10 @@ var newFilledArray = function(len, val) {
     return a;
 };
 
+var numericSortArray = function(a,b) {
+	return (a - b);
+};
+
 
 // The CSR format used is the same of scipy.sparse library
 //
@@ -194,8 +198,6 @@ csr_matrix.prototype.loadData = function(objargs) {
 	} else if (objargs.hasOwnProperty("size")) {
 		// 0 everywhere
 		this.loadData({"numcols": objargs.size.col, "fromdense": newFilledArray(objargs.size.row * objargs.size.col, 0)});
-	} else if (objargs.hasOwnProperty("fromtriples")) {
-		// leggi da file le triple e genera
 	} else if (objargs.hasOwnProperty("fromdense") && (objargs.numcols > 0)) {
 		tmp_rowptr = [];
 		tmp_col = [];
@@ -232,8 +234,57 @@ csr_matrix.prototype.loadData = function(objargs) {
 
 		// Recreate data
 		this.loadData({"numcols": objargs.numcols, "rowptr": tmp_rowptr, "colindices": tmp_col, "data": tmp_data});
-	} else if ( objargs.hasOwnProperty("fromcoo") && (objargs.numcols > 0) ) {
+	} else if ( objargs.hasOwnProperty("fromcoo") && (objargs.numcols > 0) && (objargs.numrows > 0) ) {
+		tmp_rowptr = newFilledArray(objargs.numrows, 0);
+		tmp_col = [];
+		tmp_data = [];
 
+		var currRow;
+		var currCol;
+		var currData;
+
+		var columnData = {};
+		var cooArray = objargs.fromcoo;
+		int nnzCount = cooArray / 3;
+
+		for(var i = 0; i < nnz; i++) {
+			currRow = Math.ceil( cooArray[i*3 + 0] );
+			currCol = Math.ceil( cooArray[i*3 + 1] );
+			
+			tmp_rowptr[ currRow + 1 ] = tmp_rowptr[currRow + 1] + 1;
+			for (var j = currRow + 2; j < tmp_rowptr.length; j++) {
+				tmp_rowptr[j] = tmp_rowptr[j] + 1;
+			}
+			
+			if ( !columnsData.hasOwnProperty("ROW_" + currRow) ) {
+				columnsData["ROW_" + currRow] = [];
+			}
+			
+			columnsData["ROW_" + currRow].push(currCol);
+		}
+
+		for(var i = 0; i < objargs.numrows; i++) {
+			if ( columnsData.hasOwnProperty("ROW_" + i) ) {
+				tmp_col.push.apply(tmp_col, columnsData["ROW_" + i].sort(numericSortArray) );
+			}
+		}
+
+		for(var i = 0; i < nnzCount; i++) {
+			currRow = Math.ceil( cooArray[i*3 + 0] );
+			currCol = Math.ceil( cooArray[i*3 + 1] );
+			currData = cooArray[i*3 + 2];
+			
+			var startIndex = tmp_rowptr[currRow];
+			var stopIndex = tmp_rowptr[currRow + 1];
+			
+			for (var j = startIndex; j < stopIndex; j++) {
+				if (tmp_col[j] == currCol) {
+					tmp_data[j] = currData;
+				}
+			}
+		}
+
+		this.loadData({"numcols": objargs.numcols, "rowptr": tmp_rowptr, "colindices": tmp_col, "data": tmp_data});
 	}
 };
 
@@ -410,91 +461,8 @@ csr_matrix.prototype.__denseMultiply = function(matrix) {
 	return new csr_matrix({"fromdense": denseResult, "numcols": matrix.getColCount()});
 };
 
-// TODO: Broken in column index multiplication. Need to debug
-csr_matrix.prototype.__csrMultiply = function(matrix) {
-	var baseFiller = this.baseIndex - 1;
-	//
-	var newRowCount = this.getRowCount();
-	var newColCount = matrix.getColCount();
-
-	var tmpCol = newFilledArray(newColCount, baseFiller);
-	var newRow = newFilledArray(newRowCount+1, 0);
-
-	// Primo step
-	var i = 0, k = 0, j = 0, l = 0, cntLoop = 0;
-	for(i = 0; i < newRowCount; ++i) {
-		cntLoop = 0;
-
-		for(k = this.getRowPointer()[i]; k < this.getRowPointer()[i+1]; ++k ) {
-			for(j = matrix.getRowPointer()[this.getColumnIndices()[k]]; j < matrix.getRowPointer()[this.getColumnIndices()[k]+1]; ++j ){
-				for(l = 0; l < cntLoop; l++ ) {
-					if (tmpCol[l] == matrix.getColumnIndices()[j]) {
-						break;
-					}
-				}
-
-				if (l == cntLoop) {
-					tmpCol[cntLoop] = matrix.getColumnIndices()[j];
-					cntLoop++;
-				}
-			}
-		}
-
-		newRow[i+1] = cntLoop;
-		for (j=0; j < cntLoop; ++j) {
-			tmpCol[j] = baseFiller;
-		}
-	}
-
-	for(i=0; i < newRowCount; ++i) {
-		newRow[i+1] += newRow[i];
-	}
-
-	// secondo step
-	var newCol = newFilledArray(newRow[newRowCount], 0);
-
-	for (i = 0; i < newRowCount; ++i) {
-		var countTmpCol = 0;
-		cntLoop = newRow[i];
-		for (k = this.getRowPointer()[i]; k < this.getRowPointer()[i+1]; ++k) {
-			for (j = matrix.getRowPointer()[this.getColumnIndices()[k]]; j < matrix.getRowPointer()[this.getColumnIndices()[k]+1]; ++j) {
-				for (l = 0; l < countTmpCol; l++) {
-					if (tmpCol[l] == matrix.getColumnIndices()[j]) {
-						break;
-					}
-				}
-
-				if (l == countTmpCol) {
-					newCol[cntLoop] = matrix.getColumnIndices()[j];
-					tmpCol[countTmpCol] = matrix.getColumnIndices()[j];
-					cntLoop++;
-					countTmpCol++;
-				}
-			}
-		}
-
-		for (j=0; j < countTmpCol; j++) {
-			tmpCol[j] = baseFiller;
-		}
-	}
-
-	// terzo step
-	var newData = newFilledArray(newRow[newRowCount], 0);
-
-	for (i = 0; i < newRowCount; ++i) {
-		for ( j = newRow[i]; j < newRow[i+1]; ++j) {
-			newData[j] = 0;
-			for (k = this.getRowPointer()[i]; k < this.getRowPointer()[i+1]; ++k) {
-				for ( l = matrix.getRowPointer()[this.getColumnIndices()[k]]; l < matrix.getRowPointer()[this.getColumnIndices()[k]+1]; l++) {
-					if (matrix.getColumnIndices()[l] == newCol[j]) {
-						newData[j] += this.getData()[k] * matrix.getData()[l];
-					}
-				}
-			}
-		}
-	}
-
-	return new csr_matrix({"numrows": newRowCount, "numcols": newColCount, "rowptr": newRow, "colindices": newCol, "data": newData});
+csr_matrix.prototype.__cooMultiply = function(matrix) {
+	throw new Error("Not implemented");
 };
 
 csr_matrix.prototype.equals = function(other) {
