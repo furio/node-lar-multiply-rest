@@ -232,6 +232,8 @@ csr_matrix.prototype.loadData = function(objargs) {
 
 		// Recreate data
 		this.loadData({"numcols": objargs.numcols, "rowptr": tmp_rowptr, "colindices": tmp_col, "data": tmp_data});
+	} else if ( objargs.hasOwnProperty("fromcoo") && (objargs.numcols > 0) ) {
+
 	}
 };
 
@@ -306,6 +308,52 @@ csr_matrix.prototype.toDense = function() {
 	}
 
 	return rowArray;
+};
+
+csr_matrix.prototype.nnzMultiplyCount = function(matrix) {
+	if (this.getColCount() != matrix.getRowCount()) {
+		throw new Error("Current matrix columns are different from argument matrix rows");
+	}
+
+	var baseFiller = this.baseIndex - 1;
+	//
+	var newRowCount = this.getRowCount();
+	var newColCount = matrix.getColCount();
+
+	var tmpCol = newFilledArray(newColCount, baseFiller);
+	var newRow = newFilledArray(newRowCount+1, 0);
+
+	// Primo step
+	var i = 0, k = 0, j = 0, l = 0, cntLoop = 0;
+	for(i = 0; i < newRowCount; ++i) {
+		cntLoop = 0;
+
+		for(k = this.getRowPointer()[i]; k < this.getRowPointer()[i+1]; ++k ) {
+			for(j = matrix.getRowPointer()[this.getColumnIndices()[k]]; j < matrix.getRowPointer()[this.getColumnIndices()[k]+1]; ++j ){
+				for(l = 0; l < cntLoop; l++ ) {
+					if (tmpCol[l] == matrix.getColumnIndices()[j]) {
+						break;
+					}
+				}
+
+				if (l == cntLoop) {
+					tmpCol[cntLoop] = matrix.getColumnIndices()[j];
+					cntLoop++;
+				}
+			}
+		}
+
+		newRow[i+1] = cntLoop;
+		for (j=0; j < cntLoop; ++j) {
+			tmpCol[j] = baseFiller;
+		}
+	}
+
+	for(i=0; i < newRowCount; ++i) {
+		newRow[i+1] += newRow[i];
+	}
+
+	return newRow[newRowCount];
 };
 
 csr_matrix.prototype.multiply = function(matrix) {

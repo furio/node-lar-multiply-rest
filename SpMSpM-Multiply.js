@@ -344,22 +344,227 @@ var f_multiplyMatrix = function(matA, matBx) {
 	return {"fromdense": MATRIX_RES, "numcols": matBx.getColCount()};
 };
 
-var f_multiplyMatrixNewKern = function(matA, matBx) {
-	throw new Error("To be implemented");
+var f_multiplyMatrixCOO = function(matA, matBx) {
+	if (WebCL === undefined) {
+		throw new Error("Unfortunately your system does not support WebCL. Make sure that you have the WebCL extension installed.");
+	}
+
+	// expected nnzcount
+	var nnzCount = matA.nnzMultiplyCount(matBx);
+	var COO_NNZ_SIZE = 3;
+	var nnzLengthElements = nnzCount * COO_NNZ_SIZE;
+
+	// Keep reference of objects to call release
+	var clObjects = [];
+
+	// Transpose matBx for the algorithm in CL
+	var matB = matBx.transpose();
+
+	// 
+	var bestSingleDevice = generateBestGraphicContextIdx();
+	var platform = WebCL.getPlatforms()[bestSingleDevice.pid];
+	var currDevice = platform.getDevices(WebCL.DEVICE_TYPE_ALL)[bestSingleDevice.did];
+
+	// Pick platform - device
+	log.info('WebCL::using platform: '+ bestSingleDevice.pname);
+	log.info('WebCL::using device: '+ bestSingleDevice.dname);
+
+	// Useful vars for later
+	// BASIC VAR
+	var context, program, kernel, queue;
+
+	try {
+		// create GPU context for this platform
+		context = WebCL.createContext({
+			devices: currDevice,
+			platform: platform
+		});
+		f_clObject_add(context, clObjects);
+	} catch(err) {
+		f_clObject_clear(clObjects);
+		log.error("Context error: " + err);
+		throw new Error(err);
+	}
+
+	/*
+		qui controlla se matrici sono uint, int e carica il file diverso
+		poi + avanti cambia il tipo degli array in input/output
+	*/
+
+	//Create and program from source
+	var kernelSource = fs.readFileSync(__dirname + '/' + 'SpMSpM-Multiply-COO.cl', 'ascii');
+	kernelSource = kernelSource.replace("%%AROW%%", matA.getRowCount());
+	kernelSource = kernelSource.replace("%%BCOL%%", matB.getRowCount());
+
+	try {
+		// Create program
+		program = context.createProgram(kernelSource);
+	} catch(err) {
+		log.error("Program error: " + err);
+		f_clObject_clear(clObjects);
+		throw new Error(err);
+	}
+
+	try {
+		// Build program
+		program.build(currDevice);
+		f_clObject_add(program, clObjects);
+	} catch(err) {
+		log.error("Program error: " + program.getBuildInfo(currDevice,WebCL.PROGRAM_BUILD_LOG));
+		f_clObject_clear(clObjects);
+		throw new Error(err);
+	}
+
+	var canWeUseBinaryKernel = matA.isBinary() && matB.isBinary();
+	// Buffer vars
+	var matA_rowptr, matA_colindices, matA_data,
+			matB_rowptr, matB_colindices, matB_data,
+			counter, cooResult;
+
+	try {
+		// Create buffer for A and B no copy now
+		counter = context.createBuffer(WebCL.MEM_READ_ONLY, 1*Uint32Array.BYTES_PER_ELEMENT);
+		f_clObject_add(counter, clObjects);
+		matA_rowptr = context.createBuffer(WebCL.MEM_READ_ONLY, matA.getRowPointer().length*Uint32Array.BYTES_PER_ELEMENT);
+		f_clObject_add(matA_rowptr, clObjects);
+		matA_colindices = context.createBuffer(WebCL.MEM_READ_ONLY, matA.getColumnIndices().length*Uint32Array.BYTES_PER_ELEMENT);
+		f_clObject_add(matA_colindices, clObjects);
+		if ( canWeUseBinaryKernel === false ) {
+			matA_data = context.createBuffer(WebCL.MEM_READ_ONLY, matA.getData().length*Float32Array.BYTES_PER_ELEMENT);
+			f_clObject_add(matA_data, clObjects);
+		}
+
+		matB_rowptr = context.createBuffer(WebCL.MEM_READ_ONLY, matB.getRowPointer().length*Uint32Array.BYTES_PER_ELEMENT);
+		f_clObject_add(matB_rowptr, clObjects);
+		matB_colindices = context.createBuffer(WebCL.MEM_READ_ONLY, matB.getColumnIndices().length*Uint32Array.BYTES_PER_ELEMENT);
+		f_clObject_add(matB_colindices, clObjects);
+		if ( canWeUseBinaryKernel === false ) {
+			matB_data = context.createBuffer(WebCL.MEM_READ_ONLY, matB.getData().length*Float32Array.BYTES_PER_ELEMENT);
+			f_clObject_add(matB_data, clObjects);
+		}
+
+		// Create buffer for C to read results
+		log.info("Trying to allocate " + nnzCount + " elements of " + (COO_NNZ_SIZE*Float32Array.BYTES_PER_ELEMENT) + "size, for matrix result.");
+		cooResult = context.createBuffer(WebCL.MEM_WRITE_ONLY, nnzLengthElements*Float32Array.BYTES_PER_ELEMENT);
+		f_clObject_add(cooResult, clObjects);
+	} catch(err) {
+		f_clObject_clear(clObjects);
+		log.error("Error creating buffers: " + err);
+		throw new Error(err);
+	}
+
+	// Create kernel object
+	try {
+		kernel = program.createKernel(( canWeUseBinaryKernel === true ) ? "spmm_coo_binary_kernel_naive" : "spmm_coo_kernel_naive");
+		f_clObject_add(kernel, clObjects);
+	} catch(err) {
+		log.error("Error creating kernel: " + program.getBuildInfo(currDevice,WebCL.PROGRAM_BUILD_LOG));
+		f_clObject_clear(clObjects);
+		throw new Error(err);
+	}
+
+	// Set kernel args
+	var argcKernel = 0;
+	kernel.setArg(argcKernel, matA_rowptr);
+	argcKernel += 1;
+	kernel.setArg(argcKernel, matA_colindices);
+	argcKernel += 1;
+	if ( canWeUseBinaryKernel === false ) {
+		kernel.setArg(argcKernel, matA_data);
+		argcKernel += 1;
+	}
+	kernel.setArg(argcKernel, matB_rowptr);
+	argcKernel += 1;
+	kernel.setArg(argcKernel, matB_colindices);
+	argcKernel += 1;
+	if ( canWeUseBinaryKernel === false ) {
+		kernel.setArg(argcKernel, matB_data);
+		argcKernel += 1;
+	}
+	kernel.setArg(argcKernel, counter);
+	argcKernel += 1;
+	kernel.setArg(argcKernel, cooResult);
+
+	// Create command queue
+	try {
+		queue = context.createCommandQueue(currDevice, 0);
+		f_clObject_add(queue, clObjects);
+	} catch(err) {
+		f_clObject_clear(clObjects);
+		log.error("Error creating queue: " + err);
+		throw new Error(err);
+	}
+
+	var arraySizes, globalWS, localWS;
+	var globalOff = null;
+	var maxWorkSize = currDevice.getInfo(WebCL.DEVICE_MAX_WORK_GROUP_SIZE); // kernel.getWorkGroupInfo(currDevice, WebCL.KERNEL_WORK_GROUP_SIZE);
+
+	try {
+		arraySizes = getGoodSizes(matA.getRowCount(), matB.getRowCount(), maxWorkSize);
+		globalWS = arraySizes[0];
+		localWS = arraySizes[1];
+	} catch(err) {
+		f_clObject_clear(clObjects);
+		log.error(err);
+		throw new Error(err);
+	}
+
+
+	log.info("WebCL::DEVICE_MAX_WORK_GROUP_SIZE: " + maxWorkSize);
+	log.info("WebCL::Global offset size: " + globalOff);
+	log.info("WebCL::Global work item size: " + globalWS);
+	log.info("WebCL::Local work item size: " + localWS);
+
+	// The result
+	var COUNTER_BUFF = new Uint32Array(1);
+	COUNTER_BUFF[0] = 0;
+	var MATRIX_RES;
+
+	try {
+		// copy COUNTER_BUFF
+		queue.enqueueWriteBuffer(counter, false, 0, COUNTER_BUFF.length*Uint32Array.BYTES_PER_ELEMENT, COUNTER_BUFF);
+		// and copy host contents
+		queue.enqueueWriteBuffer(matA_rowptr, false, 0, matA.getRowPointer().length*Uint32Array.BYTES_PER_ELEMENT, matA.getRowPointer(true));
+		queue.enqueueWriteBuffer(matA_colindices, false, 0, matA.getColumnIndices().length*Uint32Array.BYTES_PER_ELEMENT, matA.getColumnIndices(true));
+		if ( canWeUseBinaryKernel === false ) {
+			queue.enqueueWriteBuffer(matA_data, false, 0, matA.getData().length*Float32Array.BYTES_PER_ELEMENT, matA.getData(true));
+		}
+
+		queue.enqueueWriteBuffer(matB_rowptr, false, 0, matB.getRowPointer().length*Uint32Array.BYTES_PER_ELEMENT, matB.getRowPointer(true));
+		queue.enqueueWriteBuffer(matB_colindices, false, 0, matB.getColumnIndices().length*Uint32Array.BYTES_PER_ELEMENT, matB.getColumnIndices(true));
+		if ( canWeUseBinaryKernel === false ) {
+			queue.enqueueWriteBuffer(matB_data, false, 0, matB.getData().length*Float32Array.BYTES_PER_ELEMENT, matB.getData(true));
+		}
+
+		// Execute (enqueue) kernel
+		queue.enqueueNDRangeKernel(kernel, globalOff, globalWS, localWS);
+
+		MATRIX_RES = new Float32Array( nnzLengthElements );
+		queue.enqueueReadBuffer(cooResult, true, 0, MATRIX_RES.length*Float32Array.BYTES_PER_ELEMENT, MATRIX_RES);
+
+		// finish
+		queue.finish();
+		queue.flush();
+	} catch(err) {
+		f_clObject_clear(clObjects);
+		log.error("Errors in memory copy - kernel execution: " + err);
+		throw new Error(err);
+	}
+
+	// Hope
+	f_clObject_clear(clObjects);
+
+	return {"fromcoo": MATRIX_RES, "numcols": matBx.getColCount()};
 };
 
-var f_commonStartup = function(matA, matBx, newKernel) {
-	if ( newKernel ) {
-		return new csr_matrix( f_multiplyMatrixNewKern(matA, matBx) );
+var f_commonStartup = function(matA, matBx, fromCOO) {
+	if ( fromCOO ) {
+		return new csr_matrix( f_multiplyMatrixCOO(matA, matBx) );
 	}
 
 	return new csr_matrix( f_multiplyMatrix(matA, matBx) );
 };
 
-exports.multiplyMatrix = function(matA, matBx) {
+exports.multiplyMatrix = function(matA, matBx, fromCOO) {
 	return f_commonStartup(matA, matBx, false);
-};
-
-exports.multiplyMatrixNew = function(matA, matBx) {
-	return f_commonStartup(matA, matBx, true);
 };

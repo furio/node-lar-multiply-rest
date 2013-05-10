@@ -179,13 +179,23 @@ var childServer = function(isCluster) {
 
 	app.post('/service/:key/multiply', function(req,res){
 		log.info("POST /service/:key/multiply");
+		f_multiply_matrices_response(req,res,false);
+	});
+
+	app.post('/service/:key/multiplyCOO', function(req,res){
+		log.info("POST /service/:key/multiplyCOO");
+		// TODO: This is disabled.
+		f_multiply_matrices_response(req,res,false);
+	});	
+
+	var f_multiply_matrices_response = function(req,res,fromCOO) {
 		if ( req.hasOwnProperty("body") ) {
 			if ( req.body.hasOwnProperty("matrixa") && req.body.hasOwnProperty("matrixb") ) {
 				var matrixA = req.body.matrixa;
 				var matrixB = req.body.matrixb;
 
 				try {
-					var resultMat = f_multiply_matrices( JSON.parse(matrixA), JSON.parse(matrixB) );
+					var resultMat = f_multiply_matrices( JSON.parse(matrixA), JSON.parse(matrixB), fromCOO );
 					callReturnFunction(res)( null, resultMat );
 				} catch(err) {
 					log.info("Wrong POST request: Error while multipling: " + err);
@@ -199,9 +209,9 @@ var childServer = function(isCluster) {
 			log.info("Wrong POST request: no body");
 			callReturnFunction(res)( app.get('format_error') );
 		}
-	});
+	};
 
-	var f_multiply_matrices = function(matrixA, matrixB) {
+	var f_multiply_matrices = function(matrixA, matrixB, fromCOO) {
 		// Import the matrices
 		log.silly("Importing first matrix");
 		var csrA, csrB;
@@ -228,7 +238,7 @@ var childServer = function(isCluster) {
 		log.silly("Calculating multiplication");
 		var mulStep = null;
 		if (USE_WEBCL) {
-			mulStep = g_webcl.multiplyMatrix(csrA, csrB, true);
+			mulStep = g_webcl.multiplyMatrix(csrA, csrB, fromCOO);
 			callNodeGC();
 		} else {
 			mulStep = csrA.multiply( csrB );
